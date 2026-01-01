@@ -1,73 +1,84 @@
 name: CI
 
 on:
-    push:
-        branches: [main]
-    pull_request:
+  push:
+    branches: [main]
+  pull_request:
 
 concurrency:
-    group: ci-${{ github.ref }}
-    cancel-in-progress: true
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
 
 jobs:
-    test:
-        runs-on: ubuntu-latest
+  test:
+    runs-on: ubuntu-latest
 
-        services:
-            postgres:
-                image: postgres:16
-                env:
-                    POSTGRES_USER: postgres
-                    POSTGRES_PASSWORD: postgres
-                    POSTGRES_DB: pinetree
-                ports:
-                    - 5432:5432
-                options: >-
-                    --health-cmd="pg_isready -U postgres -d pinetree"
-                    --health-interval=10s
-                    --health-timeout=5s
-                    --health-retries=10
-
+    services:
+      postgres:
+        image: postgres:16
         env:
-            CI: 'true'
-            DATABASE_URL: postgresql://postgres:postgres@localhost:5432/pinetree?schema=public
-            TEST_DATABASE_URL: postgresql://postgres:postgres@localhost:5432/pinetree?schema=public
-            ADMIN_API_KEY: ci-secret
-            TIMEZONE: UTC
-            PUBLIC_BASE_URL: ''
-            VIBER_BOT_TOKEN: ''
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: pinetree
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd="pg_isready -U postgres -d pinetree"
+          --health-interval=10s
+          --health-timeout=5s
+          --health-retries=10
 
-        steps:
-            - name: Checkout
-              uses: actions/checkout@v4
+    env:
+      CI: 'true'
+      DATABASE_URL: postgresql://postgres:postgres@localhost:5432/pinetree?schema=public
+      TEST_DATABASE_URL: postgresql://postgres:postgres@localhost:5432/pinetree?schema=public
+      ADMIN_API_KEY: ci-secret
+      TIMEZONE: UTC
+      PUBLIC_BASE_URL: ''
+      VIBER_BOT_TOKEN: ''
 
-            - name: Setup Node
-              uses: actions/setup-node@v4
-              with:
-                  node-version: 20
-                  cache: pnpm
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
 
-            - name: Enable Corepack
-              run: corepack enable
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
 
-            - name: Activate pnpm
-              run: corepack prepare pnpm@9.15.0 --activate
+      - name: Enable Corepack
+        run: corepack enable
 
-            - name: Install dependencies
-              run: pnpm install --frozen-lockfile
+      - name: Activate pnpm
+        run: corepack prepare pnpm@9.15.0 --activate
 
-            - name: Wait for Postgres
-              run: |
-                  node -e "const net=require('net'); const deadline=Date.now()+60000; (function ping(){ const s=net.connect(5432,'127.0.0.1'); s.on('connect',()=>{s.end(); process.exit(0);}); s.on('error',()=>{ if(Date.now()>deadline){console.error('Postgres not reachable on 127.0.0.1:5432 within 60s'); process.exit(1);} setTimeout(ping,1000);}); })();"
+      - name: Get pnpm store directory
+        id: pnpm-cache
+        run: echo "STORE_PATH=$(pnpm store path --silent)" >> $GITHUB_OUTPUT
 
-            - name: Lint
-              run: pnpm lint
+      - name: Cache pnpm store
+        uses: actions/cache@v4
+        with:
+          path: ${{ steps.pnpm-cache.outputs.STORE_PATH }}
+          key: ${{ runner.os }}-pnpm-store-${{ hashFiles('pnpm-lock.yaml') }}
+          restore-keys: |
+            ${{ runner.os }}-pnpm-store-
 
-            - name: Typecheck
-              run: pnpm typecheck
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
 
-            - name: Test (unit + integration)
-              run: pnpm test
+      - name: Wait for Postgres
+        run: |
+          node -e "const net=require('net'); const deadline=Date.now()+60000; (function ping(){ const s=net.connect(5432,'127.0.0.1'); s.on('connect',()=>{s.end(); process.exit(0);}); s.on('error',()=>{ if(Date.now()>deadline){console.error('Postgres not reachable on 127.0.0.1:5432 within 60s'); process.exit(1);} setTimeout(ping,1000);}); })();"
 
-            - name: Build
-              run: pnpm build
+      - name: Lint
+        run: pnpm lint
+
+      - name: Typecheck
+        run: pnpm typecheck
+
+      - name: Test (unit + integration)
+        run: pnpm test
+
+      - name: Build
+        run: pnpm build
