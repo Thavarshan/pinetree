@@ -1,47 +1,31 @@
 {
-    "$schema": "https://json.schemastore.org/tsconfig",
-    "compilerOptions": {
-        "target": "ES2022",
-        "lib": [
-            "ES2022"
-        ],
-        "module": "CommonJS",
-        "moduleResolution": "Node",
-        "strict": true,
-        "skipLibCheck": true,
-        "noUncheckedIndexedAccess": true,
-        "exactOptionalPropertyTypes": true,
-        "forceConsistentCasingInFileNames": true,
-        "esModuleInterop": true,
-        "resolveJsonModule": true,
-        "declaration": true,
-        "declarationMap": true,
-        "sourceMap": true,
-        "outDir": "dist",
-        "rootDir": "src",
-        "types": [
-            "node"
-        ],
-        "baseUrl": ".",
-        "paths": {
-            "@pinetree/core": [
-                "packages/core/src"
-            ],
-            "@pinetree/core/*": [
-                "packages/core/src/*"
-            ],
-            "@pinetree/db": [
-                "packages/db/src"
-            ],
-            "@pinetree/db/*": [
-                "packages/db/src/*"
-            ],
-            "@pinetree/exporter": [
-                "packages/exporter/src"
-            ],
-            "@pinetree/exporter/*": [
-                "packages/exporter/src/*"
-            ]
-        }
+  "$schema": "https://json.schemastore.org/tsconfig",
+  "compilerOptions": {
+    "target": "ES2022",
+    "lib": ["ES2022"],
+    "module": "CommonJS",
+    "moduleResolution": "Node",
+    "strict": true,
+    "skipLibCheck": true,
+    "noUncheckedIndexedAccess": true,
+    "exactOptionalPropertyTypes": true,
+    "forceConsistentCasingInFileNames": true,
+    "esModuleInterop": true,
+    "resolveJsonModule": true,
+    "declaration": true,
+    "declarationMap": true,
+    "sourceMap": true,
+    "outDir": "dist",
+    "rootDir": "src",
+    "types": ["node"],
+    "baseUrl": ".",
+    "paths": {
+      "@pinetree/core": ["packages/core/src"],
+      "@pinetree/core/*": ["packages/core/src/*"],
+      "@pinetree/db": ["packages/db/src"],
+      "@pinetree/db/*": ["packages/db/src/*"],
+      "@pinetree/exporter": ["packages/exporter/src"],
+      "@pinetree/exporter/*": ["packages/exporter/src/*"]
     }
+  }
 }

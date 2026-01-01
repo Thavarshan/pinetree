@@ -1,4 +1,4 @@
-import { z } from "zod";
+import { z } from 'zod';
 
 // Minimal subset of Viber webhook payloads we care about.
 export const ViberWebhookSchema = z
@@ -26,14 +26,14 @@ export const ViberWebhookSchema = z
 export type ViberWebhook = z.infer<typeof ViberWebhookSchema>;
 
 export type ViberKeyboard = {
-  Type: "keyboard";
+  Type: 'keyboard';
   DefaultHeight?: boolean;
   Buttons: Array<{
-    ActionType: "reply";
+    ActionType: 'reply';
     ActionBody: string;
     Text: string;
     BgColor?: string;
-    TextSize?: "regular" | "large";
+    TextSize?: 'regular' | 'large';
     Columns?: number;
     Rows?: number;
   }>;
@@ -41,21 +41,21 @@ export type ViberKeyboard = {
 
 export function buildMenuKeyboard(): ViberKeyboard {
   const buttons = [
-    { label: "🟢 Start shift", body: "🟢 Start shift" },
-    { label: "☕ Break start", body: "☕ Break start" },
-    { label: "✅ Break end", body: "✅ Break end" },
-    { label: "🔴 End shift", body: "🔴 End shift" },
-    { label: "📝 Status update", body: "📝 Status update" },
+    { label: '🟢 Start shift', body: '🟢 Start shift' },
+    { label: '☕ Break start', body: '☕ Break start' },
+    { label: '✅ Break end', body: '✅ Break end' },
+    { label: '🔴 End shift', body: '🔴 End shift' },
+    { label: '📝 Status update', body: '📝 Status update' },
   ];
 
   return {
-    Type: "keyboard",
+    Type: 'keyboard',
     DefaultHeight: true,
     Buttons: buttons.map((b) => ({
-      ActionType: "reply",
+      ActionType: 'reply',
       ActionBody: b.body,
       Text: b.label,
-      TextSize: "regular",
+      TextSize: 'regular',
       Columns: 6,
       Rows: 1,
     })),
@@ -68,22 +68,22 @@ export async function viberSendMessage(params: {
   text: string;
   keyboard?: ViberKeyboard;
 }): Promise<void> {
-  const res = await fetch("https://chatapi.viber.com/pa/send_message", {
-    method: "POST",
+  const res = await fetch('https://chatapi.viber.com/pa/send_message', {
+    method: 'POST',
     headers: {
-      "Content-Type": "application/json",
-      "X-Viber-Auth-Token": params.token,
+      'Content-Type': 'application/json',
+      'X-Viber-Auth-Token': params.token,
     },
     body: JSON.stringify({
       receiver: params.receiver,
-      type: "text",
+      type: 'text',
       text: params.text,
       keyboard: params.keyboard,
     }),
   });
 
   if (!res.ok) {
-    const body = await res.text().catch(() => "");
+    const body = await res.text().catch(() => '');
     throw new Error(`Viber send_message failed: ${res.status} ${res.statusText} ${body}`);
   }
 }

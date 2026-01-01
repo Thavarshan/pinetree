@@ -1,4 +1,4 @@
-import type { EventType } from "@pinetree/core";
+import type { EventType } from '@pinetree/core';
 
 export type ExportEvent = {
   createdAt: Date;

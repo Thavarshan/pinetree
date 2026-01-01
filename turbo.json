@@ -10,13 +10,7 @@
   "tasks": {
     "build": {
       "dependsOn": ["^build"],
-      "outputs": [
-        "dist/**",
-        "build/**",
-        "lib/**",
-        ".turbo/**",
-        "packages/db/prisma/generated/**"
-      ]
+      "outputs": ["dist/**", "build/**", "lib/**", ".turbo/**", "packages/db/prisma/generated/**"]
     },
     "dev": {
       "cache": false,

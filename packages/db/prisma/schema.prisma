@@ -8,22 +8,28 @@ datasource db {
 }
 
 model User {
-  id          String   @id @default(cuid())
-  viberUserId String   @unique
-  name        String
-  avatarUrl   String?
-  createdAt   DateTime @default(now())
+  id             String   @id @default(cuid())
+  provider       String
+  providerUserId String
+  name           String
+  avatarUrl      String?
+  createdAt      DateTime @default(now())
 
   events Event[]
+
+  @@unique([provider, providerUserId])
 }
 
 model Chat {
-  id          String   @id @default(cuid())
-  viberChatId String   @unique
-  name        String?
-  createdAt   DateTime @default(now())
+  id             String   @id @default(cuid())
+  provider       String
+  providerChatId String
+  name           String?
+  createdAt      DateTime @default(now())
 
   events Event[]
+
+  @@unique([provider, providerChatId])
 }
 
 model Event {

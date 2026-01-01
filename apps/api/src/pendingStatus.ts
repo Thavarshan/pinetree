@@ -24,7 +24,7 @@ export class InMemoryPendingStatusStore {
   }
 }
 
-export function pendingKey(viberChatId: string | undefined, viberUserId: string): string {
+export function pendingKey(providerChatId: string | undefined, providerUserId: string): string {
   // In a community/group context, tie pending state to chat+user.
-  return `${viberChatId ?? "private"}::${viberUserId}`;
+  return `${providerChatId ?? 'private'}::${providerUserId}`;
 }

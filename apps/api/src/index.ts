@@ -1,6 +1,6 @@
-import { createPrismaClient } from "@pinetree/db";
-import { createApp } from "./app";
-import { getEnv } from "./env";
+import { createPrismaClient } from '@pinetree/db';
+import { createApp } from './app';
+import { getEnv } from './env';
 
 const env = getEnv();
 const prisma = createPrismaClient();

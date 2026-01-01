@@ -1,9 +1,9 @@
 export enum EventType {
-  SHIFT_START = "SHIFT_START",
-  BREAK_START = "BREAK_START",
-  BREAK_END = "BREAK_END",
-  SHIFT_END = "SHIFT_END",
-  STATUS = "STATUS",
+  SHIFT_START = 'SHIFT_START',
+  BREAK_START = 'BREAK_START',
+  BREAK_END = 'BREAK_END',
+  SHIFT_END = 'SHIFT_END',
+  STATUS = 'STATUS',
 }
 
 export type ParsedEvent =
@@ -26,5 +26,5 @@ export type ViberChat = {
 
 export type PayloadContext = {
   timezone: string;
-  source: "button" | "command" | "free_text" | "unknown";
+  source: 'button' | 'command' | 'free_text' | 'unknown';
 };

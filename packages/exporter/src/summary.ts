@@ -1,5 +1,5 @@
-import { EventType, toISODate, toLocalTimeHHmm } from "@pinetree/core";
-import type { DailySummaryRow, ExportEvent } from "./types";
+import { EventType, toISODate, toLocalTimeHHmm } from '@pinetree/core';
+import type { DailySummaryRow, ExportEvent } from './types';
 
 type BreakInterval = { start: Date; end: Date };
 
@@ -31,9 +31,9 @@ export function buildDailySummary(events: ExportEvent[], timezone: string): Dail
   for (const [key, list] of groups) {
     list.sort((a, b) => a.createdAt.getTime() - b.createdAt.getTime());
 
-    const parts = key.split("::");
-    const date = parts[0] ?? "";
-    const userName = parts[1] ?? "";
+    const parts = key.split('::');
+    const date = parts[0] ?? '';
+    const userName = parts[1] ?? '';
 
     const shiftStart = list.find((e) => e.eventType === EventType.SHIFT_START);
     const shiftEnd = [...list].reverse().find((e) => e.eventType === EventType.SHIFT_END);

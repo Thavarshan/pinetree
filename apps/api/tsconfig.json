@@ -1,23 +1,20 @@
 {
-    "extends": "../../tsconfig.base.json",
-    "compilerOptions": {
-        "rootDir": ".",
-        "outDir": "dist",
-        "noEmit": false
+  "extends": "../../tsconfig.base.json",
+  "compilerOptions": {
+    "rootDir": ".",
+    "outDir": "dist",
+    "noEmit": false
+  },
+  "include": ["src/**/*.ts", "test/**/*.ts"],
+  "references": [
+    {
+      "path": "../../packages/core"
     },
-    "include": [
-        "src/**/*.ts",
-        "test/**/*.ts"
-    ],
-    "references": [
-        {
-            "path": "../../packages/core"
-        },
-        {
-            "path": "../../packages/db"
-        },
-        {
-            "path": "../../packages/exporter"
-        }
-    ]
+    {
+      "path": "../../packages/db"
+    },
+    {
+      "path": "../../packages/exporter"
+    }
+  ]
 }

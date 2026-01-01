@@ -1,6 +1,6 @@
-# 🌲 Pinetree – Viber time tracking MVP (monorepo)
+# 🌲 Pinetree – chat time tracking MVP (Viber/Slack) (monorepo)
 
-Production-shaped MVP that logs time-tracking events from a Viber group/community bot into a DB (Postgres) and exports CSV/XLSX.
+Production-shaped MVP that logs time-tracking events from a chat bot (Viber and/or Slack) into a DB (Postgres) and exports CSV/XLSX.
 
 This README is both:
 
@@ -15,6 +15,7 @@ This README is both:
 - [Setup (local dev)](#setup-local-dev)
 - [Configuration](#configuration)
 - [Viber bot setup](#viber-bot-setup)
+- [Slack bot setup](#slack-bot-setup)
 - [User guide (in chat)](#user-guide-in-chat)
 - [API reference](#api-reference)
 - [Data model](#data-model)
@@ -35,10 +36,10 @@ This README is both:
 
 High-level flow:
 
-1) A Viber chat message is delivered to `POST /webhook/viber`.
-2) The API parses the message into a normalized “event” (start, break start/end, end, status, menu, etc.).
-3) The API stores the event in the database with idempotency (retries are safe).
-4) Admin exports are served from `GET /export/csv` and `GET /export/xlsx`.
+1. A chat message is delivered to `POST /webhook/viber` or `POST /webhook/slack`.
+2. The API parses the message into a normalized “event” (start, break start/end, end, status, menu, etc.).
+3. The API stores the event in the database with idempotency (retries are safe).
+4. Admin exports are served from `GET /export/csv` and `GET /export/xlsx`.
 
 Key design points:
 
@@ -57,16 +58,16 @@ Key design points:
 
 ## Setup (local dev)
 
-1) Install deps:
+1. Install deps:
 
 ```bash
 pnpm install
 ```
 
-1) Configure env:
+1. Configure env:
 
 - Copy `.env.example` → `.env` and fill values.
-For local dev DB, use Postgres:
+  For local dev DB, use Postgres:
 
 ```env
 DATABASE_URL="postgresql://postgres:postgres@127.0.0.1:5433/pinetree?schema=public"
@@ -74,13 +75,13 @@ DATABASE_URL="postgresql://postgres:postgres@127.0.0.1:5433/pinetree?schema=publ
 
 Note: this repo’s `docker-compose.yml` maps Postgres to host port `5433` to avoid clashing with an existing local Postgres on `5432`.
 
-1) Run migrations:
+1. Run migrations:
 
 ```bash
 pnpm --filter @pinetree/db prisma:migrate
 ```
 
-1) Run dev server:
+1. Run dev server:
 
 ```bash
 pnpm dev
@@ -100,6 +101,8 @@ ADMIN_API_KEY="dev-secret"
 TIMEZONE="UTC"
 PUBLIC_BASE_URL=""
 VIBER_BOT_TOKEN=""
+SLACK_SIGNING_SECRET=""
+SLACK_BOT_TOKEN=""
 PORT="3000"
 ```
 
@@ -117,6 +120,10 @@ PORT="3000"
   - Can be an empty string in local dev.
 - `VIBER_BOT_TOKEN` (optional for local dev)
   - Required if you want the server to send messages to Viber (keyboards/prompts).
+- `SLACK_SIGNING_SECRET` (optional)
+  - Required to accept requests on `POST /webhook/slack`.
+- `SLACK_BOT_TOKEN` (optional)
+  - Required if you want the server to send messages back to Slack.
 - `PORT` (optional)
   - Defaults to `3000`.
 
@@ -173,6 +180,27 @@ Set `PUBLIC_BASE_URL` to the generated `https://...ngrok-free.app` URL.
 cloudflared tunnel --url http://localhost:3000
 ```
 
+## Slack bot setup
+
+High-level steps:
+
+1. Create a Slack App.
+2. Enable **Event Subscriptions**.
+3. Set the Request URL to:
+
+- `${PUBLIC_BASE_URL}/webhook/slack`
+
+4. Copy credentials into env:
+
+- `SLACK_SIGNING_SECRET`
+- `SLACK_BOT_TOKEN`
+
+Notes:
+
+- This MVP listens for message events and treats the message text the same way as Viber (e.g. `/start`, `/break_start`, `/status`).
+- Slack menus are sent as plain text (no interactive buttons in this MVP).
+- To store real user display names/avatars, grant the bot token the `users:read` scope.
+
 ## User guide (in chat)
 
 - Add the bot to your group/community chat.
@@ -202,9 +230,9 @@ Free-text synonyms are supported for some common phrases (see `packages/core`).
 
 If you tap **📝 Status update** or send `/status` without text:
 
-1) Bot prompts you to “Send your status text”.
-2) Your next message within 2 minutes is stored as a `STATUS` event.
-3) If you don’t reply in time, the pending status expires.
+1. Bot prompts you to “Send your status text”.
+2. Your next message within 2 minutes is stored as a `STATUS` event.
+3. If you don’t reply in time, the pending status expires.
 
 ## API reference
 
@@ -234,7 +262,7 @@ Behavior:
 Idempotency:
 
 - Each Viber message has `message_token`.
-- The API stores it as `Event.sourceMessageId`.
+- The API stores it as `Event.sourceMessageId` (prefixed with `viber:`).
 - Re-sending the same webhook payload will not create duplicate `Event` rows.
 
 Minimal payload fields used (subset of Viber payload):
@@ -249,6 +277,25 @@ Minimal payload fields used (subset of Viber payload):
   "message": { "text": "..." }
 }
 ```
+
+### Slack webhook
+
+`POST /webhook/slack`
+
+- Purpose: ingest Slack Events API callbacks.
+- Auth: Slack request signature verification (`x-slack-signature`, `x-slack-request-timestamp`).
+- Content-Type: `application/json`
+
+Behavior:
+
+- Invalid signature: `401`
+- URL verification: `200 { "challenge": "..." }`
+- Event callbacks: `200 { ok: true }` (acked immediately; processing happens best-effort)
+
+Idempotency:
+
+- Slack delivers `event_id`.
+- The API stores it as `Event.sourceMessageId` (prefixed with `slack:`).
 
 ### Export endpoints
 
@@ -285,10 +332,10 @@ Implemented via Prisma in `packages/db/prisma/schema.prisma`.
 ### Entities
 
 - `User`
-  - `viberUserId` (unique)
+  - `provider` + `providerUserId` (unique pair)
   - `name`, optional `avatarUrl`
 - `Chat`
-  - `viberChatId` (unique when present)
+  - `provider` + `providerChatId` (unique pair)
 - `Event`
   - `eventType` (string, e.g. `START_SHIFT`, `BREAK_START`, `BREAK_END`, `END_SHIFT`, `STATUS`)
   - `text` (optional, used for status notes)
@@ -336,12 +383,13 @@ Summary logic:
 Current MVP security posture:
 
 - Export endpoints are protected by a shared secret (`ADMIN_API_KEY`) via `x-api-key`.
-- Webhook endpoint is not authenticated.
+- `POST /webhook/viber` is not authenticated.
+- `POST /webhook/slack` is authenticated via Slack request signatures.
 
 Recommended hardening for production:
 
 - Restrict `POST /webhook/viber` by IP allowlist (if Viber IP ranges are available for your region/account).
-- Add request signature verification if/when supported.
+- Keep Slack signature verification enabled; also consider replay protections (timestamp window).
 - Run behind HTTPS and keep `ADMIN_API_KEY` in a secret store.
 
 ## Testing
@@ -378,7 +426,7 @@ This project is intentionally “production-shaped”, but still an MVP. The saf
 
 ### Deploy with Docker (recommended)
 
-1) Create a `.env` for production (do not commit it):
+1. Create a `.env` for production (do not commit it):
 
 ```env
 DATABASE_URL="postgresql://postgres:postgres@postgres:5432/pinetree?schema=public"
@@ -389,18 +437,18 @@ VIBER_BOT_TOKEN="your-viber-token"
 PORT="3000"
 ```
 
-1) Run the service:
+1. Run the service:
 
 ```bash
 docker compose up --build -d
 ```
 
-1) Put a reverse proxy in front of the container.
+1. Put a reverse proxy in front of the container.
 
 - Terminate TLS at the proxy and forward requests to the container on port 3000.
 - Ensure your proxy allows `POST /webhook/viber` and `GET /export/*`.
 
-1) Verify:
+1. Verify:
 
 - `GET /health` returns `{ "ok": true }`.
 - Set the Viber webhook to `https://your-domain.example/webhook/viber`.
@@ -413,8 +461,8 @@ Notes:
 
 Recommended shape:
 
-1) Create a Railway Postgres database.
-2) Set Railway environment variables:
+1. Create a Railway Postgres database.
+2. Set Railway environment variables:
 
 - `DATABASE_URL` (from Railway Postgres)
 - `ADMIN_API_KEY`
@@ -422,13 +470,13 @@ Recommended shape:
 - `PUBLIC_BASE_URL` (your Railway service URL)
 - `VIBER_BOT_TOKEN`
 
-1) Ensure migrations run during deploy:
+1. Ensure migrations run during deploy:
 
 ```bash
 pnpm -C packages/db exec prisma migrate deploy --schema prisma/schema.prisma
 ```
 
-1) Start the service:
+1. Start the service:
 
 ```bash
 pnpm --filter @pinetree/api start
@@ -438,20 +486,20 @@ pnpm --filter @pinetree/api start
 
 This is a straightforward Node.js service. You can run it with a process manager (systemd, PM2, etc.). The minimal workflow is:
 
-1) Install dependencies and build:
+1. Install dependencies and build:
 
 ```bash
 pnpm install --frozen-lockfile
 pnpm build
 ```
 
-1) Run migrations (recommended during deploy):
+1. Run migrations (recommended during deploy):
 
 ```bash
 pnpm -C packages/db exec prisma migrate deploy --schema prisma/schema.prisma
 ```
 
-1) Start the API:
+1. Start the API:
 
 ```bash
 pnpm --filter @pinetree/api start
