@@ -22,7 +22,6 @@ This README is both:
 - [Security](#security)
 - [Testing](#testing)
 - [Deployment](#deployment)
-- [Docker](#docker)
 - [Troubleshooting](#troubleshooting)
 
 ## Monorepo layout
@@ -107,7 +106,7 @@ PORT="3000"
 ### Environment variable reference
 
 - `DATABASE_URL` (required)
-  - Postgres: `postgresql://user:pass@host:5432/db?schema=public`
+  - Postgres: `postgresql://user:pass@host:port/db?schema=public`
 - `ADMIN_API_KEY` (required for exports)
   - Used by export endpoints as `x-api-key`.
 - `TIMEZONE` (required)
@@ -174,43 +173,10 @@ Set `PUBLIC_BASE_URL` to the generated `https://...ngrok-free.app` URL.
 cloudflared tunnel --url http://localhost:3000
 ```
 
-## Using the bot in a group/community
-
-- Add the bot to your group/community chat.
-- Type `menu` (or send any message on first interaction) to receive the keyboard.
-
-Buttons:
-
-- 🟢 Start shift
-- ☕ Break start
-- ✅ Break end
-- 🔴 End shift
-- 📝 Status update
-
-Text command fallbacks:
-
-- `/start`
-- `/break_start`
-- `/break_end`
-- `/end`
-- `/status <text>`
-
-Status update flow:
-
-- Tap **📝 Status update** (or send `/status` without text)
-- Bot prompts: “Send your status text”
-- Your next message within 2 minutes is stored as a `STATUS` event
-
-Idempotency:
-
-- Viber retries are handled by a unique constraint on `Event.sourceMessageId`.
-
 ## User guide (in chat)
 
-### Keyboard / menu
-
-- Send `menu` to receive the keyboard.
-- The API may also send the keyboard automatically on first interaction.
+- Add the bot to your group/community chat.
+- Send `menu` to receive the keyboard (the API may also send it automatically on first interaction).
 
 ### Events you can record
 
@@ -239,27 +205,6 @@ If you tap **📝 Status update** or send `/status` without text:
 1) Bot prompts you to “Send your status text”.
 2) Your next message within 2 minutes is stored as a `STATUS` event.
 3) If you don’t reply in time, the pending status expires.
-
-## Export API
-
-All export endpoints require:
-
-- Header `x-api-key: ADMIN_API_KEY`
-
-Date range query options:
-
-- `?date=YYYY-MM-DD`
-- `?from=YYYY-MM-DD&to=YYYY-MM-DD`
-
-Endpoints:
-
-- `GET /export/csv`
-- `GET /export/xlsx`
-
-XLSX includes 2 sheets:
-
-- **Events**: raw list
-- **Daily Summary**: per-user daily totals (worked minutes exclude breaks) and `Incomplete` if missing start/end
 
 ## API reference
 
@@ -539,16 +484,6 @@ This project is configured for Postgres.
 ### Backups
 
 - Postgres: use standard Postgres backup tooling (logical dumps or snapshot-based backups).
-
-## Docker
-
-Build and run locally:
-
-```bash
-docker compose up --build
-```
-
-Edit `docker-compose.yml` env vars for real webhook use.
 
 ## Troubleshooting
 
