@@ -194,6 +194,7 @@ export function createSlackAdapter(): BotAdapter {
           const event = payload.event;
 
           if (event.type !== 'message') return;
+          if (event.bot_id) return; // ignore bot-authored messages (prevents reply loops)
           if (event.subtype) return; // ignore bot_message, message_changed, etc.
 
           const slackUserId = event.user;
