@@ -135,12 +135,11 @@ async function slackGetUserProfile(params: {
 
 function buildSlackMenuText(): string {
   return [
-    'Choose an action:',
-    '- /start',
-    '- /break_start',
-    '- /break_end',
-    '- /end',
-    '- /status <text>',
+    '- Start shift',
+    '- Break start',
+    '- Break end',
+    '- End shift',
+    '- Status update',
     '- menu',
   ].join('\n');
 }

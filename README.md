@@ -220,7 +220,8 @@ Notes:
 - This MVP listens for message events and treats the message text the same way as Viber.
 - Slack menus are sent as plain text (no interactive buttons in this MVP).
 - To store real user display names/avatars, grant the bot token the `users:read` scope.
-- Important: in Slack, messages starting with `/` are usually interpreted as **Slash Commands** and may not be delivered as regular message events. Prefer plain text like `Start shift` / `Break start` / `menu`, unless you also configure Slack Slash Commands (not implemented in this MVP).
+- Important: in Slack, messages starting with `/` are usually interpreted as **Slash Commands** and may not be delivered as regular message events. Prefer plain text like `Start shift` / `Break start` / `menu`.
+- If you really want to use `/start`-style text without implementing Slack Slash Commands, Slack suggests sending it as a message by prefixing a space (e.g. ` /start`).
 
 ## User guide (in chat)
 
