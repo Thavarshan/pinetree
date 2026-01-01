@@ -1,0 +1,29 @@
+services:
+  postgres:
+    image: postgres:16
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: pinetree
+    ports:
+      - '5433:5432'
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+
+  api:
+    build:
+      context: .
+      dockerfile: apps/api/Dockerfile
+    ports:
+      - '3000:3000'
+    environment:
+      PORT: '3000'
+      TIMEZONE: 'Asia/Colombo'
+      ADMIN_API_KEY: 'changeme'
+      DATABASE_URL: 'postgresql://postgres:postgres@postgres:5432/pinetree?schema=public'
+      # Required for real webhook use
+      VIBER_BOT_TOKEN: ''
+      PUBLIC_BASE_URL: ''
+
+volumes:
+  pgdata:

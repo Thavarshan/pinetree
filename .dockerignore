@@ -1,0 +1,8 @@
+node_modules
+dist
+.turbo
+.devcontainer
+.git
+**/.env
+**/.env.*
+**/.data

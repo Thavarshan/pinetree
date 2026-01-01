@@ -1,0 +1,44 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id          String   @id @default(cuid())
+  viberUserId String   @unique
+  name        String
+  avatarUrl   String?
+  createdAt   DateTime @default(now())
+
+  events Event[]
+}
+
+model Chat {
+  id          String   @id @default(cuid())
+  viberChatId String   @unique
+  name        String?
+  createdAt   DateTime @default(now())
+
+  events Event[]
+}
+
+model Event {
+  id              String   @id @default(cuid())
+  chatId          String
+  userId          String
+  eventType       String
+  text            String?
+  sourceMessageId String   @unique
+  rawPayload      String?
+  createdAt       DateTime @default(now())
+
+  chat Chat @relation(fields: [chatId], references: [id], onDelete: Cascade)
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([chatId, createdAt])
+  @@index([userId, createdAt])
+}
