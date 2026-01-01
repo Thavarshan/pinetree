@@ -11,11 +11,21 @@ function normalize(input: string): string {
   return Normalized.parse(input);
 }
 
+function containsWholePhrase(haystack: string, phrase: string): boolean {
+  if (!phrase) return false;
+  if (haystack === phrase) return true;
+  return (
+    haystack.startsWith(`${phrase} `) ||
+    haystack.endsWith(` ${phrase}`) ||
+    haystack.includes(` ${phrase} `)
+  );
+}
+
 const freeTextSynonyms: Array<{ eventType: EventType; words: string[] }> = [
-  { eventType: EventType.SHIFT_START, words: ['start', 'started', 'login', 'clock in', 'in'] },
+  { eventType: EventType.SHIFT_START, words: ['start', 'started', 'login', 'clock in'] },
   { eventType: EventType.BREAK_START, words: ['break', 'break start', 'tea', 'lunch', 'pause'] },
   { eventType: EventType.BREAK_END, words: ['break end', 'back', 'resume'] },
-  { eventType: EventType.SHIFT_END, words: ['end', 'ended', 'logout', 'clock out', 'out'] },
+  { eventType: EventType.SHIFT_END, words: ['end', 'ended', 'logout', 'clock out'] },
 ];
 
 const buttonMap: Record<string, ParsedEvent> = {
@@ -75,11 +85,22 @@ export function parseEvent(
     return { kind: 'event', ...button };
   }
 
+  // Treat status-like free text as a status update, not as an action synonym.
+  if (ctx.source === 'free_text' || ctx.source === 'unknown') {
+    for (const prefix of ['status update', 'status']) {
+      if (containsWholePhrase(normalized, prefix) || normalized.startsWith(`${prefix} `)) {
+        const tail = normalized === prefix ? '' : normalized.slice(prefix.length).trim();
+        if (tail) return { kind: 'event', eventType: EventType.STATUS, text: tail };
+        return { kind: 'status_pending' };
+      }
+    }
+  }
+
   // Free text synonym mapping (simple contains check)
   if (ctx.source === 'free_text' || ctx.source === 'unknown') {
     for (const mapping of freeTextSynonyms) {
       for (const word of mapping.words) {
-        if (normalized === word || normalized.includes(word)) {
+        if (containsWholePhrase(normalized, word)) {
           return { kind: 'event', eventType: mapping.eventType };
         }
       }

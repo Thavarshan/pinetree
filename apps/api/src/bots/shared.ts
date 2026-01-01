@@ -7,6 +7,21 @@ import { pendingKey } from '../pendingStatus';
 import type { InMemoryPendingStatusStore } from '../pendingStatus';
 import type { BotProvider } from './types';
 
+function formatEventConfirmation(eventType: EventType): string {
+  switch (eventType) {
+    case EventType.SHIFT_START:
+      return '✅ Shift started.';
+    case EventType.BREAK_START:
+      return '☕ Break started.';
+    case EventType.BREAK_END:
+      return '✅ Break ended.';
+    case EventType.SHIFT_END:
+      return '🏁 Shift ended.';
+    default:
+      return `Recorded: ${eventType}`;
+  }
+}
+
 export type SendMessage = (params: {
   conversationId: string;
   text: string;
@@ -78,7 +93,12 @@ export async function handleIncomingMessage(params: {
       createdAt,
     });
 
-    await sendMessage({ conversationId, text: `Status saved: ${messageText}`, showMenu: true });
+    const trimmed = messageText.trim();
+    await sendMessage({
+      conversationId,
+      text: trimmed ? `✅ Status saved: "${trimmed}"` : '✅ Status saved.',
+      showMenu: true,
+    });
     return;
   }
 
@@ -97,7 +117,10 @@ export async function handleIncomingMessage(params: {
 
   if (result.kind === 'status_pending') {
     pendingStatus.setPending(key, 2 * 60 * 1000);
-    await sendMessage({ conversationId, text: 'Send your status text' });
+    await sendMessage({
+      conversationId,
+      text: "What's your status? Reply with a short message.",
+    });
     return;
   }
 
@@ -130,7 +153,11 @@ export async function handleIncomingMessage(params: {
     createdAt,
   });
 
-  await sendMessage({ conversationId, text: `Recorded: ${result.eventType}`, showMenu: true });
+  await sendMessage({
+    conversationId,
+    text: formatEventConfirmation(result.eventType),
+    showMenu: true,
+  });
 }
 
 async function upsertUserChat(params: {

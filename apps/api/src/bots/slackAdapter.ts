@@ -211,7 +211,15 @@ export function createSlackAdapter(): BotAdapter {
             showMenu?: boolean;
           }) => {
             if (!ctx.env.SLACK_BOT_TOKEN) return;
-            const body = p.showMenu ? `${p.text}\n\n${buildSlackMenuText()}` : p.text;
+
+            const wantsFullMenu =
+              p.showMenu === true && p.text.trim().toLowerCase() === 'choose an action:';
+
+            const body = wantsFullMenu
+              ? `${p.text}\n${buildSlackMenuText()}`
+              : p.showMenu
+                ? `${p.text}\n\nType "menu" to see options.`
+                : p.text;
             await slackSendMessage({
               token: ctx.env.SLACK_BOT_TOKEN,
               channel: p.conversationId,

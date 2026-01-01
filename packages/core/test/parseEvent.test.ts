@@ -35,4 +35,28 @@ describe('parseEvent', () => {
     const r = parseEvent('menu', { timezone: 'Asia/Colombo', source: 'unknown' });
     expect(r).toEqual({ kind: 'menu' });
   });
+
+  it('treats free text "status update ..." as a status update with text', () => {
+    const r = parseEvent('Status update going out for a while', {
+      timezone: 'Asia/Colombo',
+      source: 'free_text',
+    });
+    expect(r).toEqual({
+      kind: 'event',
+      eventType: EventType.STATUS,
+      text: 'going out for a while',
+    });
+  });
+
+  it('does not match short substrings inside words (regression)', () => {
+    const r = parseEvent('Status update going out for a while', {
+      timezone: 'Asia/Colombo',
+      source: 'unknown',
+    });
+    expect(r).toEqual({
+      kind: 'event',
+      eventType: EventType.STATUS,
+      text: 'going out for a while',
+    });
+  });
 });
