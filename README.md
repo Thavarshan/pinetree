@@ -135,7 +135,14 @@ From repo root:
 - `pnpm build` – build all packages
 - `pnpm typecheck` – TypeScript typecheck across packages
 - `pnpm lint` – ESLint across packages
+- `pnpm format` – auto-format with Prettier (writes changes)
+- `pnpm format:check` – verify formatting (no writes; fails on drift)
 - `pnpm test` – unit tests + integration tests
+
+Notes:
+
+- ESLint is configured to work with Prettier: conflicting style rules are disabled and formatting drift is reported as `prettier/prettier` lint errors.
+- If `pnpm lint` reports formatting issues, run `pnpm format` and re-run `pnpm lint`.
 
 DB package helpers:
 
@@ -190,16 +197,30 @@ High-level steps:
 
 - `${PUBLIC_BASE_URL}/webhook/slack`
 
-4. Copy credentials into env:
+1. Under **Subscribe to bot events**, add message events for the surfaces you want to support:
 
-- `SLACK_SIGNING_SECRET`
-- `SLACK_BOT_TOKEN`
+- `message.channels` (public channels)
+- `message.groups` (private channels)
+- `message.im` (DMs)
+- `message.mpim` (group DMs)
+
+1. Under **OAuth & Permissions**, add Bot Token Scopes:
+
+- `chat:write` (to send replies)
+- `users:read` (optional; to store real user display names/avatars)
+
+1. Install the app to your workspace.
+2. Copy credentials into env:
+
+- `SLACK_SIGNING_SECRET` (from **Basic Information**)
+- `SLACK_BOT_TOKEN` (Bot User OAuth Token from **OAuth & Permissions**)
 
 Notes:
 
-- This MVP listens for message events and treats the message text the same way as Viber (e.g. `/start`, `/break_start`, `/status`).
+- This MVP listens for message events and treats the message text the same way as Viber.
 - Slack menus are sent as plain text (no interactive buttons in this MVP).
 - To store real user display names/avatars, grant the bot token the `users:read` scope.
+- Important: in Slack, messages starting with `/` are usually interpreted as **Slash Commands** and may not be delivered as regular message events. Prefer plain text like `Start shift` / `Break start` / `menu`, unless you also configure Slack Slash Commands (not implemented in this MVP).
 
 ## User guide (in chat)
 
@@ -286,11 +307,21 @@ Minimal payload fields used (subset of Viber payload):
 - Auth: Slack request signature verification (`x-slack-signature`, `x-slack-request-timestamp`).
 - Content-Type: `application/json`
 
+Requirements:
+
+- Set `SLACK_SIGNING_SECRET` or the endpoint returns `501`.
+- The server verifies the signature against the **raw** request body and rejects replays older than ~5 minutes.
+
 Behavior:
 
 - Invalid signature: `401`
 - URL verification: `200 { "challenge": "..." }`
 - Event callbacks: `200 { ok: true }` (acked immediately; processing happens best-effort)
+
+Replies:
+
+- If `SLACK_BOT_TOKEN` is set, the server will send simple text replies via `chat.postMessage`.
+- If `SLACK_BOT_TOKEN` is set and the token has `users:read`, the server will store real Slack display names/avatars (via `users.info`).
 
 Idempotency:
 
