@@ -59,4 +59,29 @@ describe('parseEvent', () => {
       text: 'going out for a while',
     });
   });
+
+  it('parses "Break start" as BREAK_START not SHIFT_START', () => {
+    const r = parseEvent('Break start', { timezone: 'Asia/Colombo', source: 'free_text' });
+    expect(r).toEqual({ kind: 'event', eventType: EventType.BREAK_START });
+  });
+
+  it('parses "Break end" as BREAK_END not BREAK_START', () => {
+    const r = parseEvent('Break end', { timezone: 'Asia/Colombo', source: 'free_text' });
+    expect(r).toEqual({ kind: 'event', eventType: EventType.BREAK_END });
+  });
+
+  it('parses "start" alone as SHIFT_START', () => {
+    const r = parseEvent('start', { timezone: 'Asia/Colombo', source: 'free_text' });
+    expect(r).toEqual({ kind: 'event', eventType: EventType.SHIFT_START });
+  });
+
+  it('parses "break" alone as BREAK_START', () => {
+    const r = parseEvent('break', { timezone: 'Asia/Colombo', source: 'free_text' });
+    expect(r).toEqual({ kind: 'event', eventType: EventType.BREAK_START });
+  });
+
+  it('parses "end" alone as SHIFT_END', () => {
+    const r = parseEvent('end', { timezone: 'Asia/Colombo', source: 'free_text' });
+    expect(r).toEqual({ kind: 'event', eventType: EventType.SHIFT_END });
+  });
 });

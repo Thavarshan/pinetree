@@ -98,11 +98,19 @@ export function parseEvent(
 
   // Free text synonym mapping (simple contains check)
   if (ctx.source === 'free_text' || ctx.source === 'unknown') {
+    // Flatten all synonyms and sort by length (descending) to prioritize longer, more specific phrases.
+    // This ensures "break start" is checked before "start", and "break end" before "break".
+    const allSynonyms: Array<{ word: string; eventType: EventType }> = [];
     for (const mapping of freeTextSynonyms) {
       for (const word of mapping.words) {
-        if (containsWholePhrase(normalized, word)) {
-          return { kind: 'event', eventType: mapping.eventType };
-        }
+        allSynonyms.push({ word, eventType: mapping.eventType });
+      }
+    }
+    allSynonyms.sort((a, b) => b.word.length - a.word.length);
+
+    for (const { word, eventType } of allSynonyms) {
+      if (containsWholePhrase(normalized, word)) {
+        return { kind: 'event', eventType };
       }
     }
   }
