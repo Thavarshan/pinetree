@@ -1,8 +1,8 @@
 import type express from 'express';
 
-import { buildMenuKeyboard, ViberWebhookSchema, viberSendMessage } from '../viber';
-import type { BotAdapter, BotContext } from './types';
+import { buildMenuKeyboard, viberSendMessage, ViberWebhookSchema } from '../viber';
 import { handleIncomingMessage } from './shared';
+import type { BotAdapter, BotContext } from './types';
 
 export function createViberAdapter(): BotAdapter {
   return {
@@ -29,6 +29,11 @@ export function createViberAdapter(): BotAdapter {
           const messageText = payload.message?.text ?? '';
           const messageToken = payload.message_token;
           const sourceMessageId = messageToken != null ? String(messageToken) : undefined;
+
+          // Extract media attachment if present (picture, video, voice, file).
+          const mediaUrl = payload.message?.media;
+          const rawMsgType = payload.message?.type;
+          const mediaType = rawMsgType && rawMsgType !== 'text' ? rawMsgType : undefined;
 
           if (!viberUserId || !sourceMessageId) {
             return res.status(400).json({ ok: false, error: 'Missing sender or message id' });
@@ -76,6 +81,8 @@ export function createViberAdapter(): BotAdapter {
             sourceMessageId,
             rawPayload: payload,
             createdAt,
+            ...(mediaUrl ? { mediaUrl } : {}),
+            ...(mediaType ? { mediaType } : {}),
             sendMessage,
           });
 

@@ -13,6 +13,7 @@
     "dotenv": "^16.4.7",
     "express": "^4.21.2",
     "luxon": "^3.5.0",
+    "node-cron": "^3.0.3",
     "@pinetree/core": "workspace:*",
     "@pinetree/db": "workspace:*",
     "@pinetree/exporter": "workspace:*",

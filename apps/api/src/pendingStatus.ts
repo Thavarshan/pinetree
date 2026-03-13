@@ -1,26 +1,29 @@
 type PendingKey = string;
 
-type PendingStatus = {
+export type PendingState = { type: 'status' } | { type: 'concern' } | { type: 'crew_off' };
+
+type PendingEntry = {
+  state: PendingState;
   expiresAt: number;
 };
 
-export class InMemoryPendingStatusStore {
-  private readonly pending = new Map<PendingKey, PendingStatus>();
+export class PendingConversationStore {
+  private readonly pending = new Map<PendingKey, PendingEntry>();
 
-  setPending(key: PendingKey, ttlMs: number): void {
+  setPending(key: PendingKey, state: PendingState, ttlMs: number): void {
     const expiresAt = Date.now() + ttlMs;
-    this.pending.set(key, { expiresAt });
+    this.pending.set(key, { state, expiresAt });
   }
 
-  consumeIfPending(key: PendingKey): boolean {
+  consumeIfPending(key: PendingKey): PendingState | null {
     const entry = this.pending.get(key);
-    if (!entry) return false;
+    if (!entry) return null;
     if (Date.now() > entry.expiresAt) {
       this.pending.delete(key);
-      return false;
+      return null;
     }
     this.pending.delete(key);
-    return true;
+    return entry.state;
   }
 }
 

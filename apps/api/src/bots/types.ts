@@ -1,15 +1,15 @@
-import type express from 'express';
 import type { PrismaClient } from '@pinetree/db';
+import type express from 'express';
 
 import type { Env } from '../env';
-import type { InMemoryPendingStatusStore } from '../pendingStatus';
+import type { PendingConversationStore } from '../pendingStatus';
 
 export type BotProvider = 'viber' | 'slack';
 
 export type BotContext = {
   env: Env;
   prisma: PrismaClient;
-  pendingStatus: InMemoryPendingStatusStore;
+  pendingStatus: PendingConversationStore;
   seenUserChats: Set<string>;
 };
 

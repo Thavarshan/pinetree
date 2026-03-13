@@ -18,6 +18,9 @@ export const ViberWebhookSchema = z
       .object({
         text: z.string().optional(),
         type: z.string().optional(),
+        media: z.string().optional(),
+        file_name: z.string().optional(),
+        size: z.number().optional(),
       })
       .optional(),
   })
@@ -46,6 +49,9 @@ export function buildMenuKeyboard(): ViberKeyboard {
     { label: '✅ Break end', body: '✅ Break end' },
     { label: '🔴 End shift', body: '🔴 End shift' },
     { label: '📝 Status update', body: '📝 Status update' },
+    { label: '🛒 Supply request', body: '🛒 Supply request' },
+    { label: '⚠️ Report concern', body: '⚠️ Report concern' },
+    { label: '🏖️ Crew off', body: '🏖️ Crew off' },
   ];
 
   return {

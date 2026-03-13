@@ -15,7 +15,10 @@ model User {
   avatarUrl      String?
   createdAt      DateTime @default(now())
 
-  events Event[]
+  events          Event[]
+  supplyRequests  SupplyRequest[]
+  concerns        Concern[]
+  crewOffRequests CrewOffRequest[]
 
   @@unique([provider, providerUserId])
 }
@@ -27,7 +30,10 @@ model Chat {
   name           String?
   createdAt      DateTime @default(now())
 
-  events Event[]
+  events          Event[]
+  supplyRequests  SupplyRequest[]
+  concerns        Concern[]
+  crewOffRequests CrewOffRequest[]
 
   @@unique([provider, providerChatId])
 }
@@ -38,6 +44,9 @@ model Event {
   userId          String
   eventType       String
   text            String?
+  mediaUrl        String?
+  mediaType       String?
+  transcript      String?
   sourceMessageId String   @unique
   rawPayload      String?
   createdAt       DateTime @default(now())
@@ -46,5 +55,52 @@ model Event {
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([chatId, createdAt])
+  @@index([userId, createdAt])
+}
+
+model SupplyRequest {
+  id             String   @id @default(cuid())
+  userId         String
+  chatId         String
+  clientLocation String?
+  status         String   @default("PENDING")
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  chat Chat @relation(fields: [chatId], references: [id], onDelete: Cascade)
+
+  @@index([userId, createdAt])
+}
+
+model Concern {
+  id             String   @id @default(cuid())
+  userId         String
+  chatId         String
+  text           String
+  conversationId String
+  provider       String
+  status         String   @default("OPEN")
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  chat Chat @relation(fields: [chatId], references: [id], onDelete: Cascade)
+
+  @@index([userId, createdAt])
+}
+
+model CrewOffRequest {
+  id        String   @id @default(cuid())
+  userId    String
+  chatId    String
+  text      String
+  status    String   @default("PENDING")
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  chat Chat @relation(fields: [chatId], references: [id], onDelete: Cascade)
+
   @@index([userId, createdAt])
 }

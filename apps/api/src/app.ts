@@ -1,14 +1,16 @@
 import express from 'express';
-import { z } from 'zod';
 import { DateTime } from 'luxon';
+import { z } from 'zod';
 
 import type { EventType } from '@pinetree/core';
 import type { PrismaClient } from '@pinetree/db';
 import { eventsToCsv, eventsToXlsx, type ExportEvent } from '@pinetree/exporter';
 
-import type { Env } from './env';
-import { InMemoryPendingStatusStore } from './pendingStatus';
 import { getBotAdapters } from './bots/factory';
+import type { Env } from './env';
+import { PendingConversationStore } from './pendingStatus';
+import { slackSendMessage } from './slack';
+import { viberSendMessage } from './viber';
 
 type HttpError = Error & { status?: number };
 
@@ -24,8 +26,17 @@ export function createApp(params: { env: Env; prisma: PrismaClient }): express.E
       },
     }),
   );
+  // Also parse URL-encoded bodies (needed for Slack interactive payloads).
+  app.use(
+    express.urlencoded({
+      extended: false,
+      verify: (req, _res, buf) => {
+        (req as unknown as { rawBody?: Buffer }).rawBody = buf;
+      },
+    }),
+  );
 
-  const pendingStatus = new InMemoryPendingStatusStore();
+  const pendingStatus = new PendingConversationStore();
   const seenUserChats = new Set<string>();
 
   const botCtx = { env, prisma, pendingStatus, seenUserChats };
@@ -131,6 +142,129 @@ export function createApp(params: { env: Env; prisma: PrismaClient }): express.E
 
   app.get('/health', (_req, res) => {
     res.json({ ok: true });
+  });
+
+  // ---- Workflow management endpoints (all require API key) ---------------------
+
+  async function sendAck(provider: string, conversationId: string, text: string): Promise<void> {
+    if (provider === 'viber' && env.VIBER_BOT_TOKEN) {
+      await viberSendMessage({ token: env.VIBER_BOT_TOKEN, receiver: conversationId, text }).catch(
+        () => {},
+      );
+    } else if (provider === 'slack' && env.SLACK_BOT_TOKEN) {
+      await slackSendMessage({ token: env.SLACK_BOT_TOKEN, channel: conversationId, text }).catch(
+        () => {},
+      );
+    }
+  }
+
+  // Supply requests
+  app.get('/supply-requests', async (req, res, next) => {
+    try {
+      requireApiKey(req);
+      const status = typeof req.query.status === 'string' ? req.query.status : undefined;
+      const items = await prisma.supplyRequest.findMany({
+        where: status ? { status } : undefined,
+        include: { user: { select: { name: true } }, chat: { select: { providerChatId: true } } },
+        orderBy: { createdAt: 'desc' },
+      });
+      res.json({ ok: true, items });
+    } catch (err) {
+      next(err);
+    }
+  });
+
+  app.patch('/supply-requests/:id/status', async (req, res, next) => {
+    try {
+      requireApiKey(req);
+      const { id } = req.params;
+      const { status } = z
+        .object({ status: z.enum(['PENDING', 'IN_PROGRESS', 'DELIVERED']) })
+        .parse(req.body);
+      const item = await prisma.supplyRequest.update({ where: { id }, data: { status } });
+      res.json({ ok: true, item });
+    } catch (err) {
+      next(err);
+    }
+  });
+
+  // Concerns
+  app.get('/concerns', async (req, res, next) => {
+    try {
+      requireApiKey(req);
+      const status = typeof req.query.status === 'string' ? req.query.status : undefined;
+      const items = await prisma.concern.findMany({
+        where: status ? { status } : undefined,
+        include: { user: { select: { name: true } } },
+        orderBy: { createdAt: 'desc' },
+      });
+      res.json({ ok: true, items });
+    } catch (err) {
+      next(err);
+    }
+  });
+
+  app.patch('/concerns/:id/status', async (req, res, next) => {
+    try {
+      requireApiKey(req);
+      const { id } = req.params;
+      const { status } = z
+        .object({ status: z.enum(['OPEN', 'IN_PROGRESS', 'COMPLETED']) })
+        .parse(req.body);
+      const item = await prisma.concern.update({ where: { id }, data: { status } });
+
+      // Req 9: send acknowledgement back to the cleaner when their concern is resolved.
+      if (status === 'COMPLETED') {
+        const ackMessages: Record<string, string> = {
+          COMPLETED: '✅ Your concern has been noted and resolved. Thank you for reporting it.',
+        };
+        await sendAck(
+          item.provider,
+          item.conversationId,
+          ackMessages[status] ?? '✅ Update received.',
+        );
+      } else if (status === 'IN_PROGRESS') {
+        await sendAck(
+          item.provider,
+          item.conversationId,
+          '🔄 Your concern is being reviewed by our team.',
+        );
+      }
+
+      res.json({ ok: true, item });
+    } catch (err) {
+      next(err);
+    }
+  });
+
+  // Crew-off requests
+  app.get('/crew-off-requests', async (req, res, next) => {
+    try {
+      requireApiKey(req);
+      const status = typeof req.query.status === 'string' ? req.query.status : undefined;
+      const items = await prisma.crewOffRequest.findMany({
+        where: status ? { status } : undefined,
+        include: { user: { select: { name: true } } },
+        orderBy: { createdAt: 'desc' },
+      });
+      res.json({ ok: true, items });
+    } catch (err) {
+      next(err);
+    }
+  });
+
+  app.patch('/crew-off-requests/:id/status', async (req, res, next) => {
+    try {
+      requireApiKey(req);
+      const { id } = req.params;
+      const { status } = z
+        .object({ status: z.enum(['PENDING', 'APPROVED', 'DENIED']) })
+        .parse(req.body);
+      const item = await prisma.crewOffRequest.update({ where: { id }, data: { status } });
+      res.json({ ok: true, item });
+    } catch (err) {
+      next(err);
+    }
   });
 
   app.use(

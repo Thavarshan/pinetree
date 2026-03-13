@@ -34,12 +34,15 @@ const buttonMap: Record<string, ParsedEvent> = {
   '✅ break end': { eventType: EventType.BREAK_END },
   '🔴 end shift': { eventType: EventType.SHIFT_END },
   '📝 status update': { eventType: EventType.STATUS },
+  '🛒 supply request': { eventType: EventType.SUPPLY_REQUEST },
 };
 
 export type ParseResult =
   | ({ kind: 'event' } & ParsedEvent)
   | { kind: 'menu' }
   | { kind: 'status_pending' }
+  | { kind: 'concern_pending' }
+  | { kind: 'crew_off_pending' }
   | { kind: 'none' };
 
 export function parseEvent(
@@ -67,6 +70,14 @@ export function parseEvent(
       case '/status':
         if (tail) return { kind: 'event', eventType: EventType.STATUS, text: tail };
         return { kind: 'status_pending' };
+      case '/supply':
+        return { kind: 'event', eventType: EventType.SUPPLY_REQUEST };
+      case '/concern':
+        if (tail) return { kind: 'event', eventType: EventType.CONCERN, text: tail };
+        return { kind: 'concern_pending' };
+      case '/crewoff':
+        if (tail) return { kind: 'event', eventType: EventType.CREW_OFF, text: tail };
+        return { kind: 'crew_off_pending' };
       default:
         return { kind: 'none' };
     }
@@ -84,6 +95,10 @@ export function parseEvent(
     if (button.eventType === EventType.STATUS) return { kind: 'status_pending' };
     return { kind: 'event', ...button };
   }
+
+  // Buttons that trigger a pending follow-up (concern and crew-off need text collection).
+  if (normalized === '⚠️ report concern') return { kind: 'concern_pending' };
+  if (normalized === '🏖️ crew off') return { kind: 'crew_off_pending' };
 
   // Treat status-like free text as a status update, not as an action synonym.
   if (ctx.source === 'free_text' || ctx.source === 'unknown') {
