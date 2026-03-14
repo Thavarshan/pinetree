@@ -186,7 +186,22 @@ export function createApp(params: { env: Env; prisma: PrismaClient }): express.E
       const { status } = z
         .object({ status: z.enum(['PENDING', 'IN_PROGRESS', 'DELIVERED']) })
         .parse(req.body);
-      const item = await prisma.supplyRequest.update({ where: { id }, data: { status } });
+      const item = await prisma.supplyRequest.update({
+        where: { id },
+        data: { status },
+        include: { chat: { select: { provider: true, providerChatId: true } } },
+      });
+
+      const ackText =
+        status === 'IN_PROGRESS'
+          ? '🔄 Your supply request is being processed.'
+          : status === 'DELIVERED'
+            ? '✅ Your supply request has been delivered.'
+            : null;
+      if (ackText) {
+        await sendAck(item.chat.provider, item.chat.providerChatId, ackText);
+      }
+
       res.json({ ok: true, item });
     } catch (err) {
       next(err);
