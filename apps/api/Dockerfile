@@ -6,16 +6,17 @@ RUN npm i -g pnpm@9.15.0
 FROM base AS deps
 COPY package.json pnpm-lock.yaml pnpm-workspace.yaml turbo.json tsconfig.base.json eslint.config.mjs prettier.config.cjs ./
 COPY apps/api/package.json apps/api/package.json
+COPY apps/dashboard/package.json apps/dashboard/package.json
 COPY packages/core/package.json packages/core/package.json
 COPY packages/db/package.json packages/db/package.json
 COPY packages/exporter/package.json packages/exporter/package.json
 
-RUN pnpm install --frozen-lockfile
+RUN pnpm install --frozen-lockfile --ignore-scripts
 
 FROM deps AS build
 COPY . .
 RUN pnpm -r --filter @pinetree/db prisma:generate
-RUN pnpm build --filter @pinetree/api...
+RUN pnpm build --filter @pinetree/api --filter @pinetree/core --filter @pinetree/db --filter @pinetree/exporter
 
 FROM base AS runner
 ENV NODE_ENV=production

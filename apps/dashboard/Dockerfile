@@ -11,13 +11,14 @@ COPY packages/core/package.json packages/core/package.json
 COPY packages/db/package.json packages/db/package.json
 COPY packages/exporter/package.json packages/exporter/package.json
 
-RUN pnpm install --frozen-lockfile
+RUN pnpm install --frozen-lockfile --ignore-scripts
 
 FROM deps AS build
 # Vite bakes these into the bundle at build time
 ARG VITE_API_BASE_URL
 ARG VITE_API_KEY
 COPY . .
+RUN pnpm -r --filter @pinetree/db prisma:generate
 RUN pnpm build --filter @pinetree/dashboard
 
 FROM nginx:alpine AS runner
