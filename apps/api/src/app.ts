@@ -265,7 +265,22 @@ export function createApp(params: { env: Env; prisma: PrismaClient }): express.E
       const { status } = z
         .object({ status: z.enum(['PENDING', 'APPROVED', 'DENIED']) })
         .parse(req.body);
-      const item = await prisma.crewOffRequest.update({ where: { id }, data: { status } });
+      const item = await prisma.crewOffRequest.update({
+        where: { id },
+        data: { status },
+        include: { chat: { select: { provider: true, providerChatId: true } } },
+      });
+
+      const ackText =
+        status === 'APPROVED'
+          ? '✅ Your crew-off request has been approved.'
+          : status === 'DENIED'
+            ? '❌ Your crew-off request has been denied.'
+            : null;
+      if (ackText) {
+        await sendAck(item.chat.provider, item.chat.providerChatId, ackText);
+      }
+
       res.json({ ok: true, item });
     } catch (err) {
       next(err);
