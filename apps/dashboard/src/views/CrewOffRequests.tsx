@@ -1,9 +1,9 @@
 import { useEffect, useState } from 'react';
 import {
-    getCrewOffRequests,
-    updateCrewOffStatus,
-    type CrewOffRequest,
-    type CrewOffStatus,
+  getCrewOffRequests,
+  updateCrewOffStatus,
+  type CrewOffRequest,
+  type CrewOffStatus,
 } from '../api';
 import { StatusBadge } from '../components/StatusBadge';
 import { Table, type Column } from '../components/Table';

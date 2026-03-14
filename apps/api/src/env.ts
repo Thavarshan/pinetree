@@ -11,6 +11,7 @@ const EnvSchema = z.object({
   PUBLIC_BASE_URL: z.union([z.string().url(), z.literal('')]).default(''),
   TIMEZONE: z.string().default('Asia/Colombo'),
   ADMIN_API_KEY: z.string().min(1),
+  DASHBOARD_URL: z.string().default(''),
   DATABASE_URL: z.string().min(1),
   PORT: z.coerce.number().int().positive().default(3000),
   REMINDER_SIGNIN_CRON: z.string().default('0 9 * * 1-5'),

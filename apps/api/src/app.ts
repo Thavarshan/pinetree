@@ -1,3 +1,4 @@
+import cors from 'cors';
 import express from 'express';
 import { DateTime } from 'luxon';
 import { z } from 'zod';
@@ -17,6 +18,13 @@ export function createApp(params: { env: Env; prisma: PrismaClient }): express.E
   const { env, prisma } = params;
 
   const app = express();
+  app.use(
+    cors({
+      origin: env.DASHBOARD_URL || false,
+      methods: ['GET', 'PATCH'],
+      allowedHeaders: ['Content-Type', 'x-api-key'],
+    }),
+  );
   app.use(
     express.json({
       limit: '1mb',
