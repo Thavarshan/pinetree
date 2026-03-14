@@ -162,9 +162,11 @@ export function createApp(params: { env: Env; prisma: PrismaClient }): express.E
   app.get('/supply-requests', async (req, res, next) => {
     try {
       requireApiKey(req);
-      const status = typeof req.query.status === 'string' ? req.query.status : undefined;
+      const statusParsed = z
+        .enum(['PENDING', 'IN_PROGRESS', 'DELIVERED'])
+        .safeParse(req.query.status);
       const items = await prisma.supplyRequest.findMany({
-        where: status ? { status } : undefined,
+        ...(statusParsed.success && { where: { status: statusParsed.data } }),
         include: { user: { select: { name: true } }, chat: { select: { providerChatId: true } } },
         orderBy: { createdAt: 'desc' },
       });
@@ -192,9 +194,9 @@ export function createApp(params: { env: Env; prisma: PrismaClient }): express.E
   app.get('/concerns', async (req, res, next) => {
     try {
       requireApiKey(req);
-      const status = typeof req.query.status === 'string' ? req.query.status : undefined;
+      const statusParsed = z.enum(['OPEN', 'IN_PROGRESS', 'COMPLETED']).safeParse(req.query.status);
       const items = await prisma.concern.findMany({
-        where: status ? { status } : undefined,
+        ...(statusParsed.success && { where: { status: statusParsed.data } }),
         include: { user: { select: { name: true } } },
         orderBy: { createdAt: 'desc' },
       });
@@ -241,9 +243,9 @@ export function createApp(params: { env: Env; prisma: PrismaClient }): express.E
   app.get('/crew-off-requests', async (req, res, next) => {
     try {
       requireApiKey(req);
-      const status = typeof req.query.status === 'string' ? req.query.status : undefined;
+      const statusParsed = z.enum(['PENDING', 'APPROVED', 'DENIED']).safeParse(req.query.status);
       const items = await prisma.crewOffRequest.findMany({
-        where: status ? { status } : undefined,
+        ...(statusParsed.success && { where: { status: statusParsed.data } }),
         include: { user: { select: { name: true } } },
         orderBy: { createdAt: 'desc' },
       });

@@ -276,7 +276,7 @@ export async function handleIncomingMessage(params: {
       data: {
         userId: user.id,
         chatId: chat.id,
-        clientLocation: providerChatId,
+        clientLocation: providerChatId ?? null,
         status: 'PENDING',
       },
     });
