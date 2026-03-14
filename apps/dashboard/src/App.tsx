@@ -18,6 +18,29 @@ const TABS: TabConfig[] = [
 
 export default function App() {
   const [tab, setTab] = useState<Tab>('overview');
+  const [signedOut, setSignedOut] = useState(
+    () => sessionStorage.getItem('pinetree_signed_out') === '1',
+  );
+
+  if (signedOut) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gray-50">
+        <div className="bg-white p-8 rounded-xl shadow-sm border border-gray-200 w-full max-w-sm text-center">
+          <h1 className="text-lg font-semibold text-gray-900 mb-1">🌲 Pinetree Admin</h1>
+          <p className="text-sm text-gray-500 mb-6">You have been signed out.</p>
+          <button
+            onClick={() => {
+              sessionStorage.removeItem('pinetree_signed_out');
+              setSignedOut(false);
+            }}
+            className="w-full bg-slate-800 text-white py-2 rounded-lg text-sm font-medium hover:bg-slate-700 transition-colors"
+          >
+            Sign back in
+          </button>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -40,6 +63,15 @@ export default function App() {
                 </button>
               ))}
             </nav>
+            <button
+              onClick={() => {
+                sessionStorage.setItem('pinetree_signed_out', '1');
+                setSignedOut(true);
+              }}
+              className="text-slate-400 hover:text-white text-sm transition-colors shrink-0"
+            >
+              Sign out
+            </button>
           </div>
         </div>
       </header>
