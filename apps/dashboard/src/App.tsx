@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { SESSION_KEY } from './api';
 import type { Tab } from './types';
 import Concerns from './views/Concerns';
 import CrewOffRequests from './views/CrewOffRequests';
@@ -18,25 +19,56 @@ const TABS: TabConfig[] = [
 
 export default function App() {
   const [tab, setTab] = useState<Tab>('overview');
-  const [signedOut, setSignedOut] = useState(
-    () => sessionStorage.getItem('pinetree_signed_out') === '1',
-  );
+  const [apiKey, setApiKey] = useState<string>(() => sessionStorage.getItem(SESSION_KEY) ?? '');
+  const [keyInput, setKeyInput] = useState('');
+  const [keyError, setKeyError] = useState('');
 
-  if (signedOut) {
+  const signOut = () => {
+    sessionStorage.removeItem(SESSION_KEY);
+    setApiKey('');
+    setKeyInput('');
+    setKeyError('');
+  };
+
+  if (!apiKey) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gray-50">
-        <div className="bg-white p-8 rounded-xl shadow-sm border border-gray-200 w-full max-w-sm text-center">
+        <div className="bg-white p-8 rounded-xl shadow-sm border border-gray-200 w-full max-w-sm">
           <h1 className="text-lg font-semibold text-gray-900 mb-1">🌲 Pinetree Admin</h1>
-          <p className="text-sm text-gray-500 mb-6">You have been signed out.</p>
-          <button
-            onClick={() => {
-              sessionStorage.removeItem('pinetree_signed_out');
-              setSignedOut(false);
+          <p className="text-sm text-gray-500 mb-6">Enter your API key to continue.</p>
+          <form
+            onSubmit={(e) => {
+              e.preventDefault();
+              const key = keyInput.trim();
+              if (!key) return;
+              sessionStorage.setItem(SESSION_KEY, key);
+              setApiKey(key);
+              setKeyError('');
             }}
-            className="w-full bg-slate-800 text-white py-2 rounded-lg text-sm font-medium hover:bg-slate-700 transition-colors"
           >
-            Sign back in
-          </button>
+            <label className="block text-sm font-medium text-gray-700 mb-1">API Key</label>
+            <input
+              type="password"
+              value={keyInput}
+              onChange={(e) => {
+                setKeyInput(e.target.value);
+                setKeyError('');
+              }}
+              className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-slate-500 mb-1"
+              placeholder="Enter your API key"
+              autoFocus
+            />
+            {keyError && <p className="text-xs text-red-600 mb-3">{keyError}</p>}
+            <div className="mt-4">
+              <button
+                type="submit"
+                disabled={!keyInput.trim()}
+                className="w-full bg-slate-800 text-white py-2 rounded-lg text-sm font-medium hover:bg-slate-700 disabled:opacity-40 transition-colors"
+              >
+                Sign in
+              </button>
+            </div>
+          </form>
         </div>
       </div>
     );
@@ -64,10 +96,7 @@ export default function App() {
               ))}
             </nav>
             <button
-              onClick={() => {
-                sessionStorage.setItem('pinetree_signed_out', '1');
-                setSignedOut(true);
-              }}
+              onClick={signOut}
               className="text-slate-400 hover:text-white text-sm transition-colors shrink-0"
             >
               Sign out

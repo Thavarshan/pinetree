@@ -1,8 +1,13 @@
 const BASE_URL: string = import.meta.env.VITE_API_BASE_URL ?? '';
-const API_KEY: string = import.meta.env.VITE_API_KEY ?? '';
+
+export const SESSION_KEY = 'pinetree_api_key';
+
+function getApiKey(): string {
+  return sessionStorage.getItem(SESSION_KEY) ?? '';
+}
 
 function apiHeaders(): Record<string, string> {
-  return { 'x-api-key': API_KEY, 'Content-Type': 'application/json' };
+  return { 'x-api-key': getApiKey(), 'Content-Type': 'application/json' };
 }
 
 async function apiGet<T>(path: string): Promise<T> {
@@ -126,7 +131,7 @@ export async function downloadExport(format: 'csv' | 'xlsx', params: ExportParam
   }
 
   const res = await fetch(`${BASE_URL}/export/${format}?${qs.toString()}`, {
-    headers: { 'x-api-key': API_KEY },
+    headers: { 'x-api-key': getApiKey() },
   });
   if (!res.ok) throw new Error(`Export failed: ${res.status} ${res.statusText}`);
 
