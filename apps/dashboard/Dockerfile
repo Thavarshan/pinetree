@@ -22,6 +22,6 @@ RUN pnpm build --filter @pinetree/dashboard
 
 FROM nginx:alpine AS runner
 COPY --from=build /app/apps/dashboard/dist /usr/share/nginx/html
-COPY apps/dashboard/nginx.conf /etc/nginx/conf.d/default.conf
+COPY --from=build /app/apps/dashboard/nginx.conf /etc/nginx/conf.d/default.conf
 EXPOSE 8080
 CMD ["nginx", "-g", "daemon off;"]
