@@ -11,11 +11,12 @@ import { getEnv } from '../src/env';
 vi.mock('../src/slack', () => ({
   slackSendMessage: vi.fn().mockResolvedValue(undefined),
   slackGetUserProfile: vi.fn().mockResolvedValue(null),
+  slackUpdateMessage: vi.fn().mockResolvedValue(undefined),
   notifySlackChannel: vi.fn().mockResolvedValue(undefined),
 }));
 vi.mock('../src/viber', async (importOriginal) => {
-  const actual = await importOriginal<typeof import('../src/viber')>();
-  return { ...actual, viberSendMessage: vi.fn().mockResolvedValue(undefined) };
+  // eslint-disable-next-line @typescript-eslint/no-unsafe-return
+  return { ...(await importOriginal()), viberSendMessage: vi.fn().mockResolvedValue(undefined) };
 });
 
 const repoRoot = path.resolve(process.cwd(), '../..');
@@ -29,25 +30,20 @@ function withSchema(databaseUrl: string, schema: string): string {
 function runPrismaMigrateDeploy(databaseUrl: string): void {
   const result = spawnSync(
     process.platform === 'win32' ? 'pnpm.cmd' : 'pnpm',
-    [
-      '-C',
-      'packages/db',
-      'exec',
-      'prisma',
-      'migrate',
-      'deploy',
-      '--schema',
-      'prisma/schema.prisma',
-    ],
+    ['exec', 'prisma', 'migrate', 'deploy'],
     {
-      cwd: repoRoot,
+      cwd: path.join(repoRoot, 'packages', 'db'),
       env: { ...process.env, DATABASE_URL: databaseUrl },
-      stdio: 'inherit',
+      stdio: 'pipe',
     },
   );
 
   if (result.status !== 0) {
-    throw new Error(`prisma migrate deploy failed with status ${result.status}`);
+    const stdout = result.stdout?.toString() ?? '';
+    const stderr = result.stderr?.toString() ?? '';
+    throw new Error(
+      `prisma migrate deploy failed (status ${result.status})\n${stdout}\n${stderr}`.trim(),
+    );
   }
 }
 
@@ -55,7 +51,7 @@ describe('API integration', () => {
   const baseDatabaseUrl =
     process.env.TEST_DATABASE_URL ??
     process.env.DATABASE_URL ??
-    'postgresql://postgres:postgres@localhost:5432/pinetree?schema=public';
+    'postgresql://postgres:postgres@localhost:5433/pinetree?schema=public';
   const schemaName = `test_${process.pid}_${Date.now()}`;
   const databaseUrl = withSchema(baseDatabaseUrl, schemaName);
 
@@ -219,7 +215,7 @@ describe('API integration', () => {
       .post('/webhook/viber')
       .send({ event: 'delivered', timestamp: Date.now(), message_token: 'del-1' });
     expect(res.status).toBe(200);
-    expect(res.body.ok).toBe(true);
+    expect((res.body as { ok: boolean }).ok).toBe(true);
   });
 
   // ---------------------------------------------------------------------------
@@ -360,9 +356,10 @@ describe('API integration', () => {
 
     const res = await request(app).get('/supply-requests').set('x-api-key', adminKey);
     expect(res.status).toBe(200);
-    expect(res.body.ok).toBe(true);
-    expect(Array.isArray(res.body.items)).toBe(true);
-    expect(res.body.items.length).toBeGreaterThanOrEqual(1);
+    const supplyListBody = res.body as { ok: boolean; items: { status: string }[] };
+    expect(supplyListBody.ok).toBe(true);
+    expect(Array.isArray(supplyListBody.items)).toBe(true);
+    expect(supplyListBody.items.length).toBeGreaterThanOrEqual(1);
   });
 
   it('GET /supply-requests filters by status', async () => {
@@ -371,7 +368,7 @@ describe('API integration', () => {
       .set('x-api-key', adminKey)
       .query({ status: 'DELIVERED' });
     expect(res.status).toBe(200);
-    const items: Array<{ status: string }> = res.body.items;
+    const items = (res.body as { items: { status: string }[] }).items;
     expect(items.every((i) => i.status === 'DELIVERED')).toBe(true);
   });
 
@@ -394,7 +391,7 @@ describe('API integration', () => {
       .send({ status: 'IN_PROGRESS' });
 
     expect(res.status).toBe(200);
-    expect(res.body.item.status).toBe('IN_PROGRESS');
+    expect((res.body as { item: { status: string } }).item.status).toBe('IN_PROGRESS');
   });
 
   it('PATCH /supply-requests/:id/status rejects invalid status', async () => {
@@ -449,8 +446,9 @@ describe('API integration', () => {
 
     const res = await request(app).get('/concerns').set('x-api-key', adminKey);
     expect(res.status).toBe(200);
-    expect(res.body.ok).toBe(true);
-    const items: Array<{ text: string }> = res.body.items;
+    const concernListBody = res.body as { ok: boolean; items: { text: string }[] };
+    expect(concernListBody.ok).toBe(true);
+    const items = concernListBody.items;
     expect(items.some((i) => i.text === 'Toilet blocked')).toBe(true);
   });
 
@@ -480,7 +478,7 @@ describe('API integration', () => {
       .send({ status: 'IN_PROGRESS' });
 
     expect(res.status).toBe(200);
-    expect(res.body.item.status).toBe('IN_PROGRESS');
+    expect((res.body as { item: { status: string } }).item.status).toBe('IN_PROGRESS');
   });
 
   it('PATCH /concerns/:id/status updates to COMPLETED', async () => {
@@ -509,7 +507,7 @@ describe('API integration', () => {
       .send({ status: 'COMPLETED' });
 
     expect(res.status).toBe(200);
-    expect(res.body.item.status).toBe('COMPLETED');
+    expect((res.body as { item: { status: string } }).item.status).toBe('COMPLETED');
   });
 
   // ---------------------------------------------------------------------------
@@ -536,8 +534,9 @@ describe('API integration', () => {
 
     const res = await request(app).get('/crew-off-requests').set('x-api-key', adminKey);
     expect(res.status).toBe(200);
-    expect(res.body.ok).toBe(true);
-    const items: Array<{ text: string }> = res.body.items;
+    const crewOffListBody = res.body as { ok: boolean; items: { text: string }[] };
+    expect(crewOffListBody.ok).toBe(true);
+    const items = crewOffListBody.items;
     expect(items.some((i) => i.text === 'Holiday')).toBe(true);
   });
 
@@ -560,7 +559,7 @@ describe('API integration', () => {
       .send({ status: 'APPROVED' });
 
     expect(res.status).toBe(200);
-    expect(res.body.item.status).toBe('APPROVED');
+    expect((res.body as { item: { status: string } }).item.status).toBe('APPROVED');
   });
 
   it('PATCH /crew-off-requests/:id/status denies a request', async () => {
@@ -582,7 +581,7 @@ describe('API integration', () => {
       .send({ status: 'DENIED' });
 
     expect(res.status).toBe(200);
-    expect(res.body.item.status).toBe('DENIED');
+    expect((res.body as { item: { status: string } }).item.status).toBe('DENIED');
   });
 
   // ---------------------------------------------------------------------------
@@ -688,6 +687,6 @@ describe('API integration', () => {
       .send({ type: 'url_verification', challenge: 'abc123' });
 
     expect(res.status).toBe(200);
-    expect(res.body.challenge).toBe('abc123');
+    expect((res.body as { challenge: string }).challenge).toBe('abc123');
   });
 });

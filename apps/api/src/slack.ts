@@ -50,6 +50,40 @@ export async function slackSendMessage(params: {
   }
 }
 
+/** Update an existing Slack message (e.g. to remove Block Kit buttons after a click). */
+export async function slackUpdateMessage(params: {
+  token: string;
+  channel: string;
+  ts: string;
+  text: string;
+  blocks?: object[];
+}): Promise<void> {
+  const body: Record<string, unknown> = {
+    channel: params.channel,
+    ts: params.ts,
+    text: params.text,
+  };
+  if (params.blocks) {
+    body.blocks = params.blocks;
+  }
+
+  const res = await fetch('https://slack.com/api/chat.update', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json; charset=utf-8',
+      Authorization: `Bearer ${params.token}`,
+    },
+    body: JSON.stringify(body),
+  });
+
+  const json = (await res.json().catch(() => null)) as SlackPostMessageResponse | null;
+
+  if (!res.ok || !json || json.ok !== true) {
+    const err = json && json.ok === false ? json.error : `${res.status} ${res.statusText}`;
+    throw new Error(`Slack chat.update failed: ${err}`);
+  }
+}
+
 export async function slackGetUserProfile(params: {
   token: string;
   userId: string;

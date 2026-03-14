@@ -2,7 +2,7 @@ import type express from 'express';
 import crypto from 'node:crypto';
 import { z } from 'zod';
 
-import { slackGetUserProfile, slackSendMessage } from '../slack';
+import { slackGetUserProfile, slackSendMessage, slackUpdateMessage } from '../slack';
 import { handleIncomingMessage } from './shared';
 import type { BotAdapter, BotContext } from './types';
 
@@ -305,6 +305,18 @@ export function createSlackAdapter(): BotAdapter {
 
           const messageText = actionIdToText[firstAction.action_id];
           if (!messageText) return;
+
+          // Remove buttons from the original message so they can't be clicked again.
+          const originalTs = actionPayload.message?.ts;
+          if (originalTs && ctx.env.SLACK_BOT_TOKEN) {
+            void slackUpdateMessage({
+              token: ctx.env.SLACK_BOT_TOKEN,
+              channel: channelId,
+              ts: originalTs,
+              text: `Selected: ${messageText}`,
+              blocks: [],
+            }).catch((e: unknown) => console.error('[slack update]', e));
+          }
 
           // Use message ts as idempotency key.
           const actionSourceId = `action:${firstAction.action_id}:${actionPayload.message?.ts ?? Date.now()}`;
