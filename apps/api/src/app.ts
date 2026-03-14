@@ -20,8 +20,8 @@ export function createApp(params: { env: Env; prisma: PrismaClient }): express.E
   const app = express();
   app.use(
     cors({
-      origin: env.DASHBOARD_URL || false,
-      methods: ['GET', 'PATCH'],
+      origin: env.DASHBOARD_URL || '*',
+      methods: ['GET', 'PATCH', 'OPTIONS'],
       allowedHeaders: ['Content-Type', 'x-api-key'],
     }),
   );
