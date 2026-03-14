@@ -34,8 +34,10 @@ export default function App() {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gray-50">
         <div className="bg-white p-8 rounded-xl shadow-sm border border-gray-200 w-full max-w-sm">
-          <h1 className="text-lg font-semibold text-gray-900 mb-1">🌲 Pinetree Admin</h1>
-          <p className="text-sm text-gray-500 mb-6">Enter your API key to continue.</p>
+          <div className="text-center items-center justify-center flex flex-col">
+            <h1 className="text-lg font-semibold text-gray-900 mb-1">🌲 Pinetree</h1>
+            <p className="text-sm text-gray-500 mb-6">Enter your API key to continue.</p>
+          </div>
           <form
             onSubmit={(e) => {
               e.preventDefault();
