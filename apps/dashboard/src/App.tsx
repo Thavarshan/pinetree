@@ -24,7 +24,7 @@ export default function App() {
       <header className="bg-slate-900 text-white">
         <div className="max-w-7xl mx-auto px-4">
           <div className="flex items-center gap-6 h-14">
-            <span className="text-sm font-semibold text-slate-100 shrink-0">🌲 Pinetree Admin</span>
+            <span className="text-sm font-semibold text-slate-100 shrink-0">🌲 Pinetree</span>
             <nav className="flex gap-1 flex-1 overflow-x-auto">
               {TABS.map((t) => (
                 <button
