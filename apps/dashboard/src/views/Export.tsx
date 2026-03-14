@@ -3,7 +3,7 @@ import { downloadExport, type ExportParams } from '../api';
 
 type Mode = 'single' | 'range';
 
-export default function Export({ apiKey }: { apiKey: string }) {
+export default function Export() {
   const [mode, setMode] = useState<Mode>('single');
   const [singleDate, setSingleDate] = useState('');
   const [fromDate, setFromDate] = useState('');
@@ -20,7 +20,7 @@ export default function Export({ apiKey }: { apiKey: string }) {
     setError('');
     setDownloading(format);
     try {
-      await downloadExport(apiKey, format, buildParams());
+      await downloadExport(format, buildParams());
     } catch (err: unknown) {
       setError(String(err));
     } finally {

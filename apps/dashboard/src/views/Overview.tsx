@@ -15,13 +15,7 @@ interface CardConfig {
   colour: string;
 }
 
-export default function Overview({
-  apiKey,
-  onTabChange,
-}: {
-  apiKey: string;
-  onTabChange: (tab: Tab) => void;
-}) {
+export default function Overview({ onTabChange }: { onTabChange: (tab: Tab) => void }) {
   const [counts, setCounts] = useState<Counts | null>(null);
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(true);
@@ -31,9 +25,9 @@ export default function Overview({
     setLoading(true);
     setError('');
     void Promise.all([
-      getConcerns(apiKey, 'OPEN'),
-      getSupplyRequests(apiKey, 'PENDING'),
-      getCrewOffRequests(apiKey, 'PENDING'),
+      getConcerns('OPEN'),
+      getSupplyRequests('PENDING'),
+      getCrewOffRequests('PENDING'),
     ])
       .then(([c, s, cr]) => {
         if (!cancelled)
@@ -52,7 +46,7 @@ export default function Overview({
     return () => {
       cancelled = true;
     };
-  }, [apiKey]);
+  }, []);
 
   const cards: CardConfig[] = [
     {

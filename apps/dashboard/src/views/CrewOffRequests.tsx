@@ -1,9 +1,9 @@
 import { useEffect, useState } from 'react';
 import {
-  getCrewOffRequests,
-  updateCrewOffStatus,
-  type CrewOffRequest,
-  type CrewOffStatus,
+    getCrewOffRequests,
+    updateCrewOffStatus,
+    type CrewOffRequest,
+    type CrewOffStatus,
 } from '../api';
 import { StatusBadge } from '../components/StatusBadge';
 import { Table, type Column } from '../components/Table';
@@ -18,21 +18,13 @@ function formatDate(d: string) {
   });
 }
 
-function ActionCell({
-  row,
-  apiKey,
-  onUpdated,
-}: {
-  row: CrewOffRequest;
-  apiKey: string;
-  onUpdated: () => void;
-}) {
+function ActionCell({ row, onUpdated }: { row: CrewOffRequest; onUpdated: () => void }) {
   const [busy, setBusy] = useState<CrewOffStatus | null>(null);
 
   const update = async (status: CrewOffStatus) => {
     setBusy(status);
     try {
-      await updateCrewOffStatus(apiKey, row.id, status);
+      await updateCrewOffStatus(row.id, status);
       onUpdated();
     } finally {
       setBusy(null);
@@ -61,7 +53,7 @@ function ActionCell({
   );
 }
 
-export default function CrewOffRequests({ apiKey }: { apiKey: string }) {
+export default function CrewOffRequests() {
   const [items, setItems] = useState<CrewOffRequest[]>([]);
   const [filter, setFilter] = useState<CrewOffStatus | 'ALL'>('ALL');
   const [refreshKey, setRefreshKey] = useState(0);
@@ -74,7 +66,7 @@ export default function CrewOffRequests({ apiKey }: { apiKey: string }) {
     let cancelled = false;
     setLoading(true);
     setError('');
-    void (filter === 'ALL' ? getCrewOffRequests(apiKey) : getCrewOffRequests(apiKey, filter))
+    void (filter === 'ALL' ? getCrewOffRequests() : getCrewOffRequests(filter))
       .then((r) => {
         if (!cancelled) setItems(r.items);
       })
@@ -87,7 +79,7 @@ export default function CrewOffRequests({ apiKey }: { apiKey: string }) {
     return () => {
       cancelled = true;
     };
-  }, [apiKey, filter, refreshKey]);
+  }, [filter, refreshKey]);
 
   const columns: Column<CrewOffRequest>[] = [
     { header: 'User', render: (r) => r.user.name },
@@ -103,7 +95,7 @@ export default function CrewOffRequests({ apiKey }: { apiKey: string }) {
     { header: 'Date', render: (r) => formatDate(r.createdAt) },
     {
       header: 'Action',
-      render: (r) => <ActionCell row={r} apiKey={apiKey} onUpdated={reload} />,
+      render: (r) => <ActionCell row={r} onUpdated={reload} />,
     },
   ];
 

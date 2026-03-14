@@ -13,21 +13,13 @@ function formatDate(d: string) {
   });
 }
 
-function ActionCell({
-  row,
-  apiKey,
-  onUpdated,
-}: {
-  row: Concern;
-  apiKey: string;
-  onUpdated: () => void;
-}) {
+function ActionCell({ row, onUpdated }: { row: Concern; onUpdated: () => void }) {
   const [busy, setBusy] = useState<ConcernStatus | null>(null);
 
   const update = async (status: ConcernStatus) => {
     setBusy(status);
     try {
-      await updateConcernStatus(apiKey, row.id, status);
+      await updateConcernStatus(row.id, status);
       onUpdated();
     } finally {
       setBusy(null);
@@ -58,7 +50,7 @@ function ActionCell({
   );
 }
 
-export default function Concerns({ apiKey }: { apiKey: string }) {
+export default function Concerns() {
   const [items, setItems] = useState<Concern[]>([]);
   const [filter, setFilter] = useState<ConcernStatus | 'ALL'>('ALL');
   const [refreshKey, setRefreshKey] = useState(0);
@@ -71,7 +63,7 @@ export default function Concerns({ apiKey }: { apiKey: string }) {
     let cancelled = false;
     setLoading(true);
     setError('');
-    void (filter === 'ALL' ? getConcerns(apiKey) : getConcerns(apiKey, filter))
+    void (filter === 'ALL' ? getConcerns() : getConcerns(filter))
       .then((r) => {
         if (!cancelled) setItems(r.items);
       })
@@ -84,7 +76,7 @@ export default function Concerns({ apiKey }: { apiKey: string }) {
     return () => {
       cancelled = true;
     };
-  }, [apiKey, filter, refreshKey]);
+  }, [filter, refreshKey]);
 
   const columns: Column<Concern>[] = [
     { header: 'User', render: (r) => r.user.name },
@@ -100,7 +92,7 @@ export default function Concerns({ apiKey }: { apiKey: string }) {
     { header: 'Date', render: (r) => formatDate(r.createdAt) },
     {
       header: 'Action',
-      render: (r) => <ActionCell row={r} apiKey={apiKey} onUpdated={reload} />,
+      render: (r) => <ActionCell row={r} onUpdated={reload} />,
     },
   ];
 

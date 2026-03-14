@@ -1,20 +1,21 @@
 const BASE_URL: string = import.meta.env.VITE_API_BASE_URL ?? '';
+const API_KEY: string = import.meta.env.VITE_API_KEY ?? '';
 
-function apiHeaders(apiKey: string): Record<string, string> {
-  return { 'x-api-key': apiKey, 'Content-Type': 'application/json' };
+function apiHeaders(): Record<string, string> {
+  return { 'x-api-key': API_KEY, 'Content-Type': 'application/json' };
 }
 
-async function apiGet<T>(path: string, apiKey: string): Promise<T> {
-  const res = await fetch(`${BASE_URL}${path}`, { headers: apiHeaders(apiKey) });
+async function apiGet<T>(path: string): Promise<T> {
+  const res = await fetch(`${BASE_URL}${path}`, { headers: apiHeaders() });
   if (!res.ok) throw new Error(`${res.status} ${res.statusText}`);
   const data: unknown = await res.json();
   return data as T;
 }
 
-async function apiPatch<T>(path: string, apiKey: string, body: unknown): Promise<T> {
+async function apiPatch<T>(path: string, body: unknown): Promise<T> {
   const res = await fetch(`${BASE_URL}${path}`, {
     method: 'PATCH',
-    headers: apiHeaders(apiKey),
+    headers: apiHeaders(),
     body: JSON.stringify(body),
   });
   if (!res.ok) throw new Error(`${res.status} ${res.statusText}`);
@@ -66,69 +67,56 @@ export interface CrewOffRequest {
 
 // ---- Supply Requests ----
 
-export function getSupplyRequests(apiKey: string): Promise<{ ok: boolean; items: SupplyRequest[] }>;
+export function getSupplyRequests(): Promise<{ ok: boolean; items: SupplyRequest[] }>;
 export function getSupplyRequests(
-  apiKey: string,
   status: SupplyRequestStatus,
 ): Promise<{ ok: boolean; items: SupplyRequest[] }>;
-export function getSupplyRequests(apiKey: string, status?: SupplyRequestStatus) {
+export function getSupplyRequests(status?: SupplyRequestStatus) {
   const qs = status !== undefined ? `?status=${status}` : '';
-  return apiGet<{ ok: boolean; items: SupplyRequest[] }>(`/supply-requests${qs}`, apiKey);
+  return apiGet<{ ok: boolean; items: SupplyRequest[] }>(`/supply-requests${qs}`);
 }
 
-export function updateSupplyRequestStatus(apiKey: string, id: string, status: SupplyRequestStatus) {
-  return apiPatch<{ ok: boolean; item: SupplyRequest }>(`/supply-requests/${id}/status`, apiKey, {
+export function updateSupplyRequestStatus(id: string, status: SupplyRequestStatus) {
+  return apiPatch<{ ok: boolean; item: SupplyRequest }>(`/supply-requests/${id}/status`, {
     status,
   });
 }
 
 // ---- Concerns ----
 
-export function getConcerns(apiKey: string): Promise<{ ok: boolean; items: Concern[] }>;
-export function getConcerns(
-  apiKey: string,
-  status: ConcernStatus,
-): Promise<{ ok: boolean; items: Concern[] }>;
-export function getConcerns(apiKey: string, status?: ConcernStatus) {
+export function getConcerns(): Promise<{ ok: boolean; items: Concern[] }>;
+export function getConcerns(status: ConcernStatus): Promise<{ ok: boolean; items: Concern[] }>;
+export function getConcerns(status?: ConcernStatus) {
   const qs = status !== undefined ? `?status=${status}` : '';
-  return apiGet<{ ok: boolean; items: Concern[] }>(`/concerns${qs}`, apiKey);
+  return apiGet<{ ok: boolean; items: Concern[] }>(`/concerns${qs}`);
 }
 
-export function updateConcernStatus(apiKey: string, id: string, status: ConcernStatus) {
-  return apiPatch<{ ok: boolean; item: Concern }>(`/concerns/${id}/status`, apiKey, { status });
+export function updateConcernStatus(id: string, status: ConcernStatus) {
+  return apiPatch<{ ok: boolean; item: Concern }>(`/concerns/${id}/status`, { status });
 }
 
 // ---- Crew-Off Requests ----
 
+export function getCrewOffRequests(): Promise<{ ok: boolean; items: CrewOffRequest[] }>;
 export function getCrewOffRequests(
-  apiKey: string,
-): Promise<{ ok: boolean; items: CrewOffRequest[] }>;
-export function getCrewOffRequests(
-  apiKey: string,
   status: CrewOffStatus,
 ): Promise<{ ok: boolean; items: CrewOffRequest[] }>;
-export function getCrewOffRequests(apiKey: string, status?: CrewOffStatus) {
+export function getCrewOffRequests(status?: CrewOffStatus) {
   const qs = status !== undefined ? `?status=${status}` : '';
-  return apiGet<{ ok: boolean; items: CrewOffRequest[] }>(`/crew-off-requests${qs}`, apiKey);
+  return apiGet<{ ok: boolean; items: CrewOffRequest[] }>(`/crew-off-requests${qs}`);
 }
 
-export function updateCrewOffStatus(apiKey: string, id: string, status: CrewOffStatus) {
-  return apiPatch<{ ok: boolean; item: CrewOffRequest }>(
-    `/crew-off-requests/${id}/status`,
-    apiKey,
-    { status },
-  );
+export function updateCrewOffStatus(id: string, status: CrewOffStatus) {
+  return apiPatch<{ ok: boolean; item: CrewOffRequest }>(`/crew-off-requests/${id}/status`, {
+    status,
+  });
 }
 
 // ---- Export ----
 
 export type ExportParams = { date: string } | { from: string; to: string };
 
-export async function downloadExport(
-  apiKey: string,
-  format: 'csv' | 'xlsx',
-  params: ExportParams,
-): Promise<void> {
+export async function downloadExport(format: 'csv' | 'xlsx', params: ExportParams): Promise<void> {
   const qs = new URLSearchParams();
   if ('date' in params) {
     qs.set('date', params.date);
@@ -138,7 +126,7 @@ export async function downloadExport(
   }
 
   const res = await fetch(`${BASE_URL}/export/${format}?${qs.toString()}`, {
-    headers: { 'x-api-key': apiKey },
+    headers: { 'x-api-key': API_KEY },
   });
   if (!res.ok) throw new Error(`Export failed: ${res.status} ${res.statusText}`);
 

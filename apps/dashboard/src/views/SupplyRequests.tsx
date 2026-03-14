@@ -1,9 +1,9 @@
 import { useEffect, useState } from 'react';
 import {
-  getSupplyRequests,
-  updateSupplyRequestStatus,
-  type SupplyRequest,
-  type SupplyRequestStatus,
+    getSupplyRequests,
+    updateSupplyRequestStatus,
+    type SupplyRequest,
+    type SupplyRequestStatus,
 } from '../api';
 import { StatusBadge } from '../components/StatusBadge';
 import { Table, type Column } from '../components/Table';
@@ -18,15 +18,7 @@ function formatDate(d: string) {
   });
 }
 
-function ActionCell({
-  row,
-  apiKey,
-  onUpdated,
-}: {
-  row: SupplyRequest;
-  apiKey: string;
-  onUpdated: () => void;
-}) {
+function ActionCell({ row, onUpdated }: { row: SupplyRequest; onUpdated: () => void }) {
   const [busy, setBusy] = useState(false);
   const next: SupplyRequestStatus | null =
     row.status === 'PENDING' ? 'IN_PROGRESS' : row.status === 'IN_PROGRESS' ? 'DELIVERED' : null;
@@ -39,7 +31,7 @@ function ActionCell({
       onClick={async () => {
         setBusy(true);
         try {
-          await updateSupplyRequestStatus(apiKey, row.id, next);
+          await updateSupplyRequestStatus(row.id, next);
           onUpdated();
         } finally {
           setBusy(false);
@@ -52,7 +44,7 @@ function ActionCell({
   );
 }
 
-export default function SupplyRequests({ apiKey }: { apiKey: string }) {
+export default function SupplyRequests() {
   const [items, setItems] = useState<SupplyRequest[]>([]);
   const [filter, setFilter] = useState<SupplyRequestStatus | 'ALL'>('ALL');
   const [refreshKey, setRefreshKey] = useState(0);
@@ -65,7 +57,7 @@ export default function SupplyRequests({ apiKey }: { apiKey: string }) {
     let cancelled = false;
     setLoading(true);
     setError('');
-    void (filter === 'ALL' ? getSupplyRequests(apiKey) : getSupplyRequests(apiKey, filter))
+    void (filter === 'ALL' ? getSupplyRequests() : getSupplyRequests(filter))
       .then((r) => {
         if (!cancelled) setItems(r.items);
       })
@@ -78,7 +70,7 @@ export default function SupplyRequests({ apiKey }: { apiKey: string }) {
     return () => {
       cancelled = true;
     };
-  }, [apiKey, filter, refreshKey]);
+  }, [filter, refreshKey]);
 
   const columns: Column<SupplyRequest>[] = [
     { header: 'User', render: (r) => r.user.name },
@@ -87,7 +79,7 @@ export default function SupplyRequests({ apiKey }: { apiKey: string }) {
     { header: 'Date', render: (r) => formatDate(r.createdAt) },
     {
       header: 'Action',
-      render: (r) => <ActionCell row={r} apiKey={apiKey} onUpdated={reload} />,
+      render: (r) => <ActionCell row={r} onUpdated={reload} />,
     },
   ];
 
