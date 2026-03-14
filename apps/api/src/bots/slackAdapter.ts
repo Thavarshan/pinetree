@@ -22,6 +22,7 @@ const SlackEventPayloadSchema = z
         subtype: z.string().optional(),
         user: z.string().optional(),
         bot_id: z.string().optional(),
+        app_id: z.string().optional(),
         text: z.string().optional(),
         channel: z.string().optional(),
         ts: z.string().optional(),
@@ -167,8 +168,11 @@ export function createSlackAdapter(): BotAdapter {
           const event = payload.event;
 
           if (event.type !== 'message') return;
-          if (event.bot_id) return; // ignore bot-authored messages (prevents reply loops)
-          if (event.subtype) return; // ignore bot_message, message_changed, etc.
+          // Ignore bot/app-authored messages to prevent reply loops.
+          // Slack sets bot_id, app_id, or subtype:'bot_message' on these — check all three.
+          if (event.bot_id || event.app_id) return;
+          if (event.subtype) return; // bot_message, message_changed, message_deleted, etc.
+          if (!event.user) return; // no human user ID = not a real user message
 
           const slackUserId = event.user;
           const channel = event.channel;
