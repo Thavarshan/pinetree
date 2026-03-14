@@ -4,7 +4,6 @@ import cron from 'node-cron';
 
 import type { Env } from './env';
 import { slackSendMessage } from './slack';
-import { viberSendMessage } from './viber';
 
 async function sendReminder(params: {
   env: Env;
@@ -21,13 +20,7 @@ async function sendReminder(params: {
   if (!recentEvent) return;
 
   const { chat } = recentEvent;
-  if (chat.provider === 'viber' && env.VIBER_BOT_TOKEN) {
-    await viberSendMessage({
-      token: env.VIBER_BOT_TOKEN,
-      receiver: chat.providerChatId,
-      text,
-    }).catch((e: unknown) => console.error('[reminder viber]', e));
-  } else if (chat.provider === 'slack' && env.SLACK_BOT_TOKEN) {
+  if (chat.provider === 'slack' && env.SLACK_BOT_TOKEN) {
     await slackSendMessage({
       token: env.SLACK_BOT_TOKEN,
       channel: chat.providerChatId,

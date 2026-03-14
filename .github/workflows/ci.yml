@@ -35,7 +35,6 @@ jobs:
       ADMIN_API_KEY: ci-secret
       TIMEZONE: UTC
       PUBLIC_BASE_URL: ''
-      VIBER_BOT_TOKEN: ''
 
     steps:
       - name: Checkout

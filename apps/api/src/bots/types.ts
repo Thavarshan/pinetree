@@ -4,7 +4,7 @@ import type express from 'express';
 import type { Env } from '../env';
 import type { PendingConversationStore } from '../pendingStatus';
 
-export type BotProvider = 'viber' | 'slack';
+export type BotProvider = 'slack';
 
 export type BotContext = {
   env: Env;

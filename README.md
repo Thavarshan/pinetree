@@ -1,6 +1,6 @@
-# 🌲 Pinetree – chat time tracking MVP (Viber/Slack) (monorepo)
+# 🌲 Pinetree – chat time tracking MVP (Slack) (monorepo)
 
-Production-shaped MVP that logs time-tracking events from a chat bot (Viber and/or Slack) into a DB (Postgres) and exports CSV/XLSX.
+Production-shaped MVP that logs time-tracking events from a Slack chat bot into a DB (Postgres) and exports CSV/XLSX.
 
 This README is both:
 
@@ -14,7 +14,6 @@ This README is both:
 - [Prereqs](#prereqs)
 - [Setup (local dev)](#setup-local-dev)
 - [Configuration](#configuration)
-- [Viber bot setup](#viber-bot-setup)
 - [Slack bot setup](#slack-bot-setup)
 - [User guide (in chat)](#user-guide-in-chat)
 - [API reference](#api-reference)
@@ -36,14 +35,14 @@ This README is both:
 
 High-level flow:
 
-1. A chat message is delivered to `POST /webhook/viber` or `POST /webhook/slack`.
+1. A chat message is delivered to `POST /webhook/slack`.
 2. The API parses the message into a normalized “event” (start, break start/end, end, status, menu, etc.).
 3. The API stores the event in the database with idempotency (retries are safe).
 4. Admin exports are served from `GET /export/csv` and `GET /export/xlsx`.
 
 Key design points:
 
-- **Idempotency**: Viber can retry deliveries; we store `Event.sourceMessageId` with a unique constraint.
+- **Idempotency**: We store `Event.sourceMessageId` with a unique constraint to prevent duplicate events.
 - **Postgres-first**: Prisma is configured for Postgres (recommended for Railway and local dev).
 - **Separation of concerns**:
   - parsing/timezone utilities: `packages/core`
@@ -100,7 +99,6 @@ DATABASE_URL="postgresql://postgres:postgres@127.0.0.1:5433/pinetree?schema=publ
 ADMIN_API_KEY="dev-secret"
 TIMEZONE="UTC"
 PUBLIC_BASE_URL=""
-VIBER_BOT_TOKEN=""
 SLACK_SIGNING_SECRET=""
 SLACK_BOT_TOKEN=""
 PORT="3000"
@@ -118,8 +116,6 @@ PORT="3000"
 - `PUBLIC_BASE_URL` (optional)
   - Public https URL used by webhook configuration and some bot messaging.
   - Can be an empty string in local dev.
-- `VIBER_BOT_TOKEN` (optional for local dev)
-  - Required if you want the server to send messages to Viber (keyboards/prompts).
 - `SLACK_SIGNING_SECRET` (optional)
   - Required to accept requests on `POST /webhook/slack`.
 - `SLACK_BOT_TOKEN` (optional)
@@ -148,44 +144,6 @@ DB package helpers:
 
 - `pnpm --filter @pinetree/db prisma:migrate` – creates/applies a dev migration (interactive)
 - `pnpm --filter @pinetree/db prisma:studio` – opens Prisma Studio
-
-## Viber bot setup
-
-### Create a bot token
-
-- Create a Viber Public Account / Bot via Viber admin tooling.
-- Copy the bot token into `VIBER_BOT_TOKEN`.
-
-### Set webhook
-
-Set webhook to:
-
-- `${PUBLIC_BASE_URL}/webhook/viber`
-
-Example (from your machine):
-
-```bash
-curl -X POST https://chatapi.viber.com/pa/set_webhook \
-  -H "X-Viber-Auth-Token: $VIBER_BOT_TOKEN" \
-  -H "Content-Type: application/json" \
-  -d '{"url":"'"$PUBLIC_BASE_URL"'/webhook/viber"}'
-```
-
-### Local development with ngrok / cloudflared
-
-- ngrok:
-
-```bash
-ngrok http 3000
-```
-
-Set `PUBLIC_BASE_URL` to the generated `https://...ngrok-free.app` URL.
-
-- cloudflared:
-
-```bash
-cloudflared tunnel --url http://localhost:3000
-```
 
 ## Slack bot setup
 
@@ -217,8 +175,8 @@ High-level steps:
 
 Notes:
 
-- This MVP listens for message events and treats the message text the same way as Viber.
-- Slack menus are sent as plain text (no interactive buttons in this MVP).
+- This MVP listens for message events and parses the message text for time-tracking commands.
+- Slack menus are sent as Block Kit interactive buttons.
 - To store real user display names/avatars, grant the bot token the `users:read` scope.
 - Important: in Slack, messages starting with `/` are usually interpreted as **Slash Commands** and may not be delivered as regular message events. Prefer plain text like `Start shift` / `Break start` / `menu`.
 - If you really want to use `/start`-style text without implementing Slack Slash Commands, Slack suggests sending it as a message by prefixing a space (e.g. ` /start`).
@@ -265,40 +223,6 @@ Base URL (local): `http://localhost:3000`
 `GET /health`
 
 - Response: `200 { "ok": true }`
-
-### Viber webhook
-
-`POST /webhook/viber`
-
-- Purpose: ingest Viber events (we care about `event: "message"`).
-- Auth: none (Viber doesn’t sign requests by default in this MVP).
-- Content-Type: `application/json`
-
-Behavior:
-
-- Non-message events: `200 { ok: true }`
-- Invalid payload: `400`
-- Missing sender or message id: `400`
-- Successful ingest: `200 { ok: true }`
-
-Idempotency:
-
-- Each Viber message has `message_token`.
-- The API stores it as `Event.sourceMessageId` (prefixed with `viber:`).
-- Re-sending the same webhook payload will not create duplicate `Event` rows.
-
-Minimal payload fields used (subset of Viber payload):
-
-```json
-{
-  "event": "message",
-  "timestamp": 1700000000000,
-  "message_token": 123456789,
-  "chat_id": "...",
-  "sender": { "id": "...", "name": "...", "avatar": "..." },
-  "message": { "text": "..." }
-}
-```
 
 ### Slack webhook
 
@@ -415,12 +339,10 @@ Summary logic:
 Current MVP security posture:
 
 - Export endpoints are protected by a shared secret (`ADMIN_API_KEY`) via `x-api-key`.
-- `POST /webhook/viber` is not authenticated.
 - `POST /webhook/slack` is authenticated via Slack request signatures.
 
 Recommended hardening for production:
 
-- Restrict `POST /webhook/viber` by IP allowlist (if Viber IP ranges are available for your region/account).
 - Keep Slack signature verification enabled; also consider replay protections (timestamp window).
 - Run behind HTTPS and keep `ADMIN_API_KEY` in a secret store.
 
@@ -465,7 +387,6 @@ DATABASE_URL="postgresql://postgres:postgres@postgres:5432/pinetree?schema=publi
 ADMIN_API_KEY="replace-with-a-long-random-secret"
 TIMEZONE="UTC"
 PUBLIC_BASE_URL="https://your-domain.example"
-VIBER_BOT_TOKEN="your-viber-token"
 PORT="3000"
 ```
 
@@ -478,12 +399,11 @@ docker compose up --build -d
 1. Put a reverse proxy in front of the container.
 
 - Terminate TLS at the proxy and forward requests to the container on port 3000.
-- Ensure your proxy allows `POST /webhook/viber` and `GET /export/*`.
+- Ensure your proxy allows `POST /webhook/slack` and `GET /export/*`.
 
 1. Verify:
 
 - `GET /health` returns `{ "ok": true }`.
-- Set the Viber webhook to `https://your-domain.example/webhook/viber`.
 
 Notes:
 
@@ -500,7 +420,6 @@ Recommended shape:
 - `ADMIN_API_KEY`
 - `TIMEZONE`
 - `PUBLIC_BASE_URL` (your Railway service URL)
-- `VIBER_BOT_TOKEN`
 
 1. Ensure migrations run during deploy:
 

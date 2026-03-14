@@ -10,7 +10,6 @@ import { getBotAdapters } from './bots/factory';
 import type { Env } from './env';
 import { PendingConversationStore } from './pendingStatus';
 import { slackSendMessage } from './slack';
-import { viberSendMessage } from './viber';
 
 type HttpError = Error & { status?: number };
 
@@ -147,11 +146,7 @@ export function createApp(params: { env: Env; prisma: PrismaClient }): express.E
   // ---- Workflow management endpoints (all require API key) ---------------------
 
   async function sendAck(provider: string, conversationId: string, text: string): Promise<void> {
-    if (provider === 'viber' && env.VIBER_BOT_TOKEN) {
-      await viberSendMessage({ token: env.VIBER_BOT_TOKEN, receiver: conversationId, text }).catch(
-        () => {},
-      );
-    } else if (provider === 'slack' && env.SLACK_BOT_TOKEN) {
+    if (provider === 'slack' && env.SLACK_BOT_TOKEN) {
       await slackSendMessage({ token: env.SLACK_BOT_TOKEN, channel: conversationId, text }).catch(
         () => {},
       );

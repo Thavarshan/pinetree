@@ -21,8 +21,6 @@ services:
       TIMEZONE: 'Asia/Colombo'
       ADMIN_API_KEY: 'changeme'
       DATABASE_URL: 'postgresql://postgres:postgres@postgres:5432/pinetree?schema=public'
-      # Required for real webhook use
-      VIBER_BOT_TOKEN: ''
       PUBLIC_BASE_URL: ''
 
 volumes:

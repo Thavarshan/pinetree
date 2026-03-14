@@ -7,17 +7,13 @@ import { createPrismaClient } from '@pinetree/db';
 import { createApp } from '../src/app';
 import { getEnv } from '../src/env';
 
-// Prevent real outbound Slack / Viber HTTP calls during tests.
+// Prevent real outbound Slack HTTP calls during tests.
 vi.mock('../src/slack', () => ({
   slackSendMessage: vi.fn().mockResolvedValue(undefined),
   slackGetUserProfile: vi.fn().mockResolvedValue(null),
   slackUpdateMessage: vi.fn().mockResolvedValue(undefined),
   notifySlackChannel: vi.fn().mockResolvedValue(undefined),
 }));
-vi.mock('../src/viber', async (importOriginal) => {
-  // eslint-disable-next-line @typescript-eslint/no-unsafe-return
-  return { ...(await importOriginal()), viberSendMessage: vi.fn().mockResolvedValue(undefined) };
-});
 
 const repoRoot = path.resolve(process.cwd(), '../..');
 
@@ -66,7 +62,6 @@ describe('API integration', () => {
     process.env.ADMIN_API_KEY = adminKey;
     process.env.TIMEZONE = timezone;
     process.env.PUBLIC_BASE_URL = '';
-    process.env.VIBER_BOT_TOKEN = '';
     process.env.SLACK_BOT_TOKEN = '';
     process.env.SLACK_SIGNING_SECRET = '';
 
@@ -106,11 +101,11 @@ describe('API integration', () => {
 
   it('exports csv with x-api-key', async () => {
     const user = await prisma.user.create({
-      data: { provider: 'viber', providerUserId: 'u1', name: 'Alice' },
+      data: { provider: 'slack', providerUserId: 'u1', name: 'Alice' },
       select: { id: true },
     });
     const chat = await prisma.chat.create({
-      data: { provider: 'viber', providerChatId: 'c1' },
+      data: { provider: 'slack', providerChatId: 'c1' },
       select: { id: true },
     });
 
@@ -146,190 +141,6 @@ describe('API integration', () => {
     expect(res.headers['content-type']).toContain(
       'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
     );
-  });
-
-  // ---------------------------------------------------------------------------
-  // Viber webhook — idempotency
-  // ---------------------------------------------------------------------------
-
-  it('is idempotent for webhook retries (same message_token)', async () => {
-    const payload = {
-      event: 'message',
-      timestamp: Date.now(),
-      message_token: 'same-1',
-      chat_id: 'c2',
-      sender: { id: 'u2', name: 'Bob' },
-      message: { type: 'text', text: '/start' },
-    };
-
-    const r1 = await request(app).post('/webhook/viber').send(payload);
-    const r2 = await request(app).post('/webhook/viber').send(payload);
-
-    expect(r1.status).toBe(200);
-    expect(r2.status).toBe(200);
-
-    const events = await prisma.event.findMany({ where: { sourceMessageId: 'viber:same-1' } });
-    expect(events).toHaveLength(1);
-  });
-
-  // ---------------------------------------------------------------------------
-  // Viber webhook — basic single-step events
-  // ---------------------------------------------------------------------------
-
-  it('records SHIFT_END via Viber /end command', async () => {
-    const res = await request(app)
-      .post('/webhook/viber')
-      .send({
-        event: 'message',
-        timestamp: Date.now(),
-        message_token: 'end-1',
-        chat_id: 'c-end',
-        sender: { id: 'u-end', name: 'Charlie' },
-        message: { type: 'text', text: '/end' },
-      });
-    expect(res.status).toBe(200);
-
-    const ev = await prisma.event.findUnique({ where: { sourceMessageId: 'viber:end-1' } });
-    expect(ev?.eventType).toBe('SHIFT_END');
-  });
-
-  it('records BREAK_START via Viber button text', async () => {
-    const res = await request(app)
-      .post('/webhook/viber')
-      .send({
-        event: 'message',
-        timestamp: Date.now(),
-        message_token: 'break-1',
-        chat_id: 'c-break',
-        sender: { id: 'u-break', name: 'Dana' },
-        message: { type: 'text', text: '☕ Break start' },
-      });
-    expect(res.status).toBe(200);
-
-    const ev = await prisma.event.findUnique({ where: { sourceMessageId: 'viber:break-1' } });
-    expect(ev?.eventType).toBe('BREAK_START');
-  });
-
-  it('ignores non-message Viber events', async () => {
-    const res = await request(app)
-      .post('/webhook/viber')
-      .send({ event: 'delivered', timestamp: Date.now(), message_token: 'del-1' });
-    expect(res.status).toBe(200);
-    expect((res.body as { ok: boolean }).ok).toBe(true);
-  });
-
-  // ---------------------------------------------------------------------------
-  // Viber webhook — two-step status update flow
-  // ---------------------------------------------------------------------------
-
-  it('records a STATUS event via two-step Viber flow', async () => {
-    const ts = Date.now();
-
-    await request(app)
-      .post('/webhook/viber')
-      .send({
-        event: 'message',
-        timestamp: ts,
-        message_token: `status-step1-${ts}`,
-        chat_id: 'c-status',
-        sender: { id: 'u-status', name: 'Eve' },
-        message: { type: 'text', text: '📝 Status update' },
-      });
-
-    const r2 = await request(app)
-      .post('/webhook/viber')
-      .send({
-        event: 'message',
-        timestamp: ts + 1000,
-        message_token: `status-step2-${ts}`,
-        chat_id: 'c-status',
-        sender: { id: 'u-status', name: 'Eve' },
-        message: { type: 'text', text: 'Cleaning west wing' },
-      });
-    expect(r2.status).toBe(200);
-
-    const ev = await prisma.event.findUnique({
-      where: { sourceMessageId: `viber:status-step2-${ts}` },
-    });
-    expect(ev?.eventType).toBe('STATUS');
-    expect(ev?.text).toBe('Cleaning west wing');
-  });
-
-  // ---------------------------------------------------------------------------
-  // Viber webhook — two-step concern flow
-  // ---------------------------------------------------------------------------
-
-  it('records a concern via two-step Viber flow', async () => {
-    const ts = Date.now();
-
-    await request(app)
-      .post('/webhook/viber')
-      .send({
-        event: 'message',
-        timestamp: ts,
-        message_token: `concern-step1-${ts}`,
-        chat_id: 'c-concern',
-        sender: { id: 'u-concern', name: 'Frank' },
-        message: { type: 'text', text: '⚠️ Report concern' },
-      });
-
-    const r2 = await request(app)
-      .post('/webhook/viber')
-      .send({
-        event: 'message',
-        timestamp: ts + 1000,
-        message_token: `concern-step2-${ts}`,
-        chat_id: 'c-concern',
-        sender: { id: 'u-concern', name: 'Frank' },
-        message: { type: 'text', text: 'The mop is broken' },
-      });
-    expect(r2.status).toBe(200);
-
-    const concern = await prisma.concern.findFirst({ where: { text: 'The mop is broken' } });
-    expect(concern).not.toBeNull();
-    expect(concern?.status).toBe('OPEN');
-
-    const ev = await prisma.event.findUnique({
-      where: { sourceMessageId: `viber:concern-step2-${ts}` },
-    });
-    expect(ev?.eventType).toBe('CONCERN');
-  });
-
-  // ---------------------------------------------------------------------------
-  // Viber webhook — two-step crew-off flow
-  // ---------------------------------------------------------------------------
-
-  it('records a crew-off request via two-step Viber flow', async () => {
-    const ts = Date.now();
-
-    await request(app)
-      .post('/webhook/viber')
-      .send({
-        event: 'message',
-        timestamp: ts,
-        message_token: `crewoff-step1-${ts}`,
-        chat_id: 'c-crewoff',
-        sender: { id: 'u-crewoff', name: 'Grace' },
-        message: { type: 'text', text: '🏖️ Crew off' },
-      });
-
-    const r2 = await request(app)
-      .post('/webhook/viber')
-      .send({
-        event: 'message',
-        timestamp: ts + 1000,
-        message_token: `crewoff-step2-${ts}`,
-        chat_id: 'c-crewoff',
-        sender: { id: 'u-crewoff', name: 'Grace' },
-        message: { type: 'text', text: 'Need Friday off for appointment' },
-      });
-    expect(r2.status).toBe(200);
-
-    const cr = await prisma.crewOffRequest.findFirst({
-      where: { text: 'Need Friday off for appointment' },
-    });
-    expect(cr).not.toBeNull();
-    expect(cr?.status).toBe('PENDING');
   });
 
   // ---------------------------------------------------------------------------
@@ -426,11 +237,11 @@ describe('API integration', () => {
 
   it('GET /concerns returns list', async () => {
     const user = await prisma.user.create({
-      data: { provider: 'viber', providerUserId: 'con-u1', name: 'Kate' },
+      data: { provider: 'slack', providerUserId: 'con-u1', name: 'Kate' },
       select: { id: true },
     });
     const chat = await prisma.chat.create({
-      data: { provider: 'viber', providerChatId: 'con-c1' },
+      data: { provider: 'slack', providerChatId: 'con-c1' },
       select: { id: true },
     });
     await prisma.concern.create({
@@ -439,7 +250,7 @@ describe('API integration', () => {
         chatId: chat.id,
         text: 'Toilet blocked',
         conversationId: 'con-c1',
-        provider: 'viber',
+        provider: 'slack',
         status: 'OPEN',
       },
     });
@@ -454,11 +265,11 @@ describe('API integration', () => {
 
   it('PATCH /concerns/:id/status updates to IN_PROGRESS', async () => {
     const user = await prisma.user.create({
-      data: { provider: 'viber', providerUserId: 'con-u2', name: 'Leo' },
+      data: { provider: 'slack', providerUserId: 'con-u2', name: 'Leo' },
       select: { id: true },
     });
     const chat = await prisma.chat.create({
-      data: { provider: 'viber', providerChatId: 'con-c2' },
+      data: { provider: 'slack', providerChatId: 'con-c2' },
       select: { id: true },
     });
     const concern = await prisma.concern.create({
@@ -467,7 +278,7 @@ describe('API integration', () => {
         chatId: chat.id,
         text: 'Light broken',
         conversationId: 'con-c2',
-        provider: 'viber',
+        provider: 'slack',
         status: 'OPEN',
       },
     });
@@ -483,11 +294,11 @@ describe('API integration', () => {
 
   it('PATCH /concerns/:id/status updates to COMPLETED', async () => {
     const user = await prisma.user.create({
-      data: { provider: 'viber', providerUserId: 'con-u3', name: 'Mia' },
+      data: { provider: 'slack', providerUserId: 'con-u3', name: 'Mia' },
       select: { id: true },
     });
     const chat = await prisma.chat.create({
-      data: { provider: 'viber', providerChatId: 'con-c3' },
+      data: { provider: 'slack', providerChatId: 'con-c3' },
       select: { id: true },
     });
     const concern = await prisma.concern.create({
@@ -496,7 +307,7 @@ describe('API integration', () => {
         chatId: chat.id,
         text: 'Floor wet',
         conversationId: 'con-c3',
-        provider: 'viber',
+        provider: 'slack',
         status: 'OPEN',
       },
     });
@@ -521,11 +332,11 @@ describe('API integration', () => {
 
   it('GET /crew-off-requests returns list', async () => {
     const user = await prisma.user.create({
-      data: { provider: 'viber', providerUserId: 'cr-u1', name: 'Ned' },
+      data: { provider: 'slack', providerUserId: 'cr-u1', name: 'Ned' },
       select: { id: true },
     });
     const chat = await prisma.chat.create({
-      data: { provider: 'viber', providerChatId: 'cr-c1' },
+      data: { provider: 'slack', providerChatId: 'cr-c1' },
       select: { id: true },
     });
     await prisma.crewOffRequest.create({
@@ -542,11 +353,11 @@ describe('API integration', () => {
 
   it('PATCH /crew-off-requests/:id/status approves a request', async () => {
     const user = await prisma.user.create({
-      data: { provider: 'viber', providerUserId: 'cr-u2', name: 'Olivia' },
+      data: { provider: 'slack', providerUserId: 'cr-u2', name: 'Olivia' },
       select: { id: true },
     });
     const chat = await prisma.chat.create({
-      data: { provider: 'viber', providerChatId: 'cr-c2' },
+      data: { provider: 'slack', providerChatId: 'cr-c2' },
       select: { id: true },
     });
     const cr = await prisma.crewOffRequest.create({
@@ -564,11 +375,11 @@ describe('API integration', () => {
 
   it('PATCH /crew-off-requests/:id/status denies a request', async () => {
     const user = await prisma.user.create({
-      data: { provider: 'viber', providerUserId: 'cr-u3', name: 'Paul' },
+      data: { provider: 'slack', providerUserId: 'cr-u3', name: 'Paul' },
       select: { id: true },
     });
     const chat = await prisma.chat.create({
-      data: { provider: 'viber', providerChatId: 'cr-c3' },
+      data: { provider: 'slack', providerChatId: 'cr-c3' },
       select: { id: true },
     });
     const cr = await prisma.crewOffRequest.create({

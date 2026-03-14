@@ -19,17 +19,6 @@ export type ParsedEvent =
   | { eventType: EventType.CONCERN; text?: string }
   | { eventType: EventType.CREW_OFF; text?: string };
 
-export type ViberUser = {
-  viberUserId: string;
-  name: string;
-  avatarUrl?: string;
-};
-
-export type ViberChat = {
-  viberChatId: string;
-  name?: string;
-};
-
 export type PayloadContext = {
   timezone: string;
   source: 'button' | 'command' | 'free_text' | 'unknown';

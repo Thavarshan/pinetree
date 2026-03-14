@@ -5,16 +5,19 @@
     "outDir": "dist",
     "noEmit": false
   },
-  "include": ["src/**/*.ts", "test/**/*.ts"],
+  "include": [
+    "src/**/*.ts",
+    "test/**/*.ts"
+  ],
   "references": [
     {
-      "path": "../../packages/core"
+      "path": "../../packages/core/tsconfig.build.json"
     },
     {
       "path": "../../packages/db"
     },
     {
-      "path": "../../packages/exporter"
+      "path": "../../packages/exporter/tsconfig.build.json"
     }
   ]
 }

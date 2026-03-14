@@ -194,7 +194,10 @@ export function createSlackAdapter(): BotAdapter {
                 token: ctx.env.SLACK_BOT_TOKEN,
                 channel: p.conversationId,
                 text: p.text,
-                blocks: buildSlackMenuBlocks(),
+                blocks: [
+                  { type: 'section', text: { type: 'mrkdwn', text: p.text } },
+                  ...buildSlackMenuBlocks(),
+                ],
               });
             } else {
               await slackSendMessage({
@@ -332,7 +335,10 @@ export function createSlackAdapter(): BotAdapter {
                 token: ctx.env.SLACK_BOT_TOKEN,
                 channel: p.conversationId,
                 text: p.text,
-                blocks: buildSlackMenuBlocks(),
+                blocks: [
+                  { type: 'section', text: { type: 'mrkdwn', text: p.text } },
+                  ...buildSlackMenuBlocks(),
+                ],
               });
             } else {
               await slackSendMessage({

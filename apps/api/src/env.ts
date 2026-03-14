@@ -4,7 +4,6 @@ import { z } from 'zod';
 dotenv.config({ path: process.env.ENV_FILE ?? '.env' });
 
 const EnvSchema = z.object({
-  VIBER_BOT_TOKEN: z.string().optional().default(''),
   SLACK_SIGNING_SECRET: z.string().optional().default(''),
   SLACK_BOT_TOKEN: z.string().optional().default(''),
   SLACK_CALLCENTRE_CHANNEL_ID: z.string().optional().default(''),
