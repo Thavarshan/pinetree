@@ -5,7 +5,7 @@ import { z } from 'zod';
 
 import type { EventType } from '@pinetree/core';
 import type { PrismaClient } from '@pinetree/db';
-import { eventsToCsv, eventsToXlsx, type ExportEvent } from '@pinetree/exporter';
+import { buildDailySummary, eventsToCsv, eventsToXlsx, type ExportEvent } from '@pinetree/exporter';
 
 import { getBotAdapters } from './bots/factory';
 import type { Env } from './env';
@@ -142,6 +142,28 @@ export function createApp(params: { env: Env; prisma: PrismaClient }): express.E
       );
       res.setHeader('Content-Disposition', `attachment; filename=events.xlsx`);
       res.status(200).send(xlsx);
+    } catch (err) {
+      next(err);
+    }
+  });
+
+  app.get('/timesheet', async (req, res, next) => {
+    try {
+      requireApiKey(req);
+      const range = parseDateRange(req.query, env.TIMEZONE);
+      const events = await prisma.event.findMany({
+        where: { createdAt: { gte: range.from, lte: range.to } },
+        include: { user: true },
+        orderBy: { createdAt: 'asc' },
+      });
+      const rows: ExportEvent[] = events.map((e) => ({
+        createdAt: e.createdAt,
+        eventType: e.eventType as unknown as EventType,
+        userName: e.user.name,
+        text: e.text,
+      }));
+      const items = buildDailySummary(rows, env.TIMEZONE);
+      res.json({ ok: true, items });
     } catch (err) {
       next(err);
     }

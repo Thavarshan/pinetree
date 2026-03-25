@@ -12,6 +12,7 @@ export default defineConfig({
       '/crew-off-requests': 'http://localhost:3000',
       '/export': 'http://localhost:3000',
       '/health': 'http://localhost:3000',
+      '/timesheet': 'http://localhost:3000',
     },
   },
 });

@@ -1,11 +1,12 @@
 import { useEffect, useState } from 'react';
-import { getConcerns, getCrewOffRequests, getSupplyRequests } from '../api';
+import { getConcerns, getCrewOffRequests, getSupplyRequests, getTimesheet } from '../api';
 import type { Tab } from '../types';
 
 interface Counts {
   concerns: number;
   supply: number;
   crewOff: number;
+  incompleteShifts: number;
 }
 
 interface CardConfig {
@@ -28,13 +29,15 @@ export default function Overview({ onTabChange }: { onTabChange: (tab: Tab) => v
       getConcerns('OPEN'),
       getSupplyRequests('PENDING'),
       getCrewOffRequests('PENDING'),
+      getTimesheet({ date: new Date().toISOString().slice(0, 10) }),
     ])
-      .then(([c, s, cr]) => {
+      .then(([c, s, cr, ts]) => {
         if (!cancelled)
           setCounts({
             concerns: c.items.length,
             supply: s.items.length,
             crewOff: cr.items.length,
+            incompleteShifts: ts.items.filter((r) => r.incomplete).length,
           });
       })
       .catch((err: unknown) => {
@@ -67,6 +70,12 @@ export default function Overview({ onTabChange }: { onTabChange: (tab: Tab) => v
       tab: 'crew-off',
       colour: 'text-blue-600',
     },
+    {
+      label: 'Incomplete Shifts Today',
+      count: counts?.incompleteShifts ?? 0,
+      tab: 'timesheet',
+      colour: 'text-slate-600',
+    },
   ];
 
   if (loading) {
@@ -79,7 +88,7 @@ export default function Overview({ onTabChange }: { onTabChange: (tab: Tab) => v
       {error && (
         <div className="mb-4 rounded-lg bg-red-50 px-4 py-3 text-sm text-red-700">{error}</div>
       )}
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         {cards.map((card) => (
           <button
             key={card.tab}

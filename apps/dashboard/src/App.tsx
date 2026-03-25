@@ -6,6 +6,7 @@ import CrewOffRequests from './views/CrewOffRequests';
 import Export from './views/Export';
 import Overview from './views/Overview';
 import SupplyRequests from './views/SupplyRequests';
+import Timesheet from './views/Timesheet';
 
 type TabConfig = { id: Tab; label: string };
 
@@ -14,6 +15,7 @@ const TABS: TabConfig[] = [
   { id: 'supply', label: 'Supply Requests' },
   { id: 'concerns', label: 'Concerns' },
   { id: 'crew-off', label: 'Crew-Off Requests' },
+  { id: 'timesheet', label: 'Timesheet' },
   { id: 'export', label: 'Export' },
 ];
 
@@ -111,6 +113,7 @@ export default function App() {
         {tab === 'supply' && <SupplyRequests />}
         {tab === 'concerns' && <Concerns />}
         {tab === 'crew-off' && <CrewOffRequests />}
+        {tab === 'timesheet' && <Timesheet />}
         {tab === 'export' && <Export />}
       </main>
     </div>

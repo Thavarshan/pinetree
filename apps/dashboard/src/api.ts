@@ -145,3 +145,30 @@ export async function downloadExport(format: 'csv' | 'xlsx', params: ExportParam
   document.body.removeChild(a);
   URL.revokeObjectURL(url);
 }
+
+// ---- Timesheet ----
+
+export interface DailySummaryRow {
+  date: string;
+  userName: string;
+  shiftStartTime?: string;
+  shiftEndTime?: string;
+  totalBreakMinutes: number;
+  totalWorkedMinutes: number;
+  incomplete: boolean;
+}
+
+export type TimesheetParams = { date: string } | { from: string; to: string };
+
+export function getTimesheet(
+  params: TimesheetParams,
+): Promise<{ ok: boolean; items: DailySummaryRow[] }> {
+  const qs = new URLSearchParams();
+  if ('date' in params) {
+    qs.set('date', params.date);
+  } else {
+    qs.set('from', params.from);
+    qs.set('to', params.to);
+  }
+  return apiGet<{ ok: boolean; items: DailySummaryRow[] }>(`/timesheet?${qs.toString()}`);
+}

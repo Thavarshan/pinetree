@@ -1,1 +1,1 @@
-export type Tab = 'overview' | 'supply' | 'concerns' | 'crew-off' | 'export';
+export type Tab = 'overview' | 'supply' | 'concerns' | 'crew-off' | 'export' | 'timesheet';
