@@ -30,8 +30,7 @@ export default function Timesheet() {
     setLoading(true);
     setError('');
 
-    const params: TimesheetParams =
-      mode === 'single' ? { date } : { from, to };
+    const params: TimesheetParams = mode === 'single' ? { date } : { from, to };
 
     void getTimesheet(params)
       .then((res) => {
