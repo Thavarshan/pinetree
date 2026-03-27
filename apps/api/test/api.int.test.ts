@@ -47,7 +47,7 @@ describe('API integration', () => {
   const baseDatabaseUrl =
     process.env.TEST_DATABASE_URL ??
     process.env.DATABASE_URL ??
-    'postgresql://postgres:postgres@localhost:5433/pinetree?schema=public';
+    'postgresql://postgres:postgres@localhost:5432/pinetree?schema=public';
   const schemaName = `test_${process.pid}_${Date.now()}`;
   const databaseUrl = withSchema(baseDatabaseUrl, schemaName);
 
