@@ -1,4 +1,5 @@
 import { spawnSync } from 'node:child_process';
+import crypto from 'node:crypto';
 import path from 'node:path';
 import request from 'supertest';
 import { afterAll, beforeAll, describe, expect, it, vi } from 'vitest';
@@ -16,6 +17,21 @@ vi.mock('../src/slack', () => ({
 }));
 
 const repoRoot = path.resolve(process.cwd(), '../..');
+const TEST_SIGNING_SECRET = 'test-signing-secret';
+
+/** Compute Slack request signature headers for a JSON body. */
+function slackSign(body: object): {
+  'x-slack-request-timestamp': string;
+  'x-slack-signature': string;
+} {
+  const timestamp = Math.floor(Date.now() / 1000).toString();
+  const raw = JSON.stringify(body);
+  const sig = crypto
+    .createHmac('sha256', TEST_SIGNING_SECRET)
+    .update(`v0:${timestamp}:${raw}`)
+    .digest('hex');
+  return { 'x-slack-request-timestamp': timestamp, 'x-slack-signature': `v0=${sig}` };
+}
 
 function withSchema(databaseUrl: string, schema: string): string {
   const url = new URL(databaseUrl);
@@ -63,7 +79,7 @@ describe('API integration', () => {
     process.env.TIMEZONE = timezone;
     process.env.PUBLIC_BASE_URL = '';
     process.env.SLACK_BOT_TOKEN = '';
-    process.env.SLACK_SIGNING_SECRET = '';
+    process.env.SLACK_SIGNING_SECRET = TEST_SIGNING_SECRET;
 
     runPrismaMigrateDeploy(databaseUrl);
 
@@ -402,21 +418,20 @@ describe('API integration', () => {
   it('ignores Slack messages with app_id set (bot loop prevention)', async () => {
     const before = await prisma.event.count();
 
-    const res = await request(app)
-      .post('/webhook/slack')
-      .send({
-        type: 'event_callback',
-        event_id: 'Ev_bot_app_id',
-        event_time: Math.floor(Date.now() / 1000),
-        event: {
-          type: 'message',
-          user: 'U_BOT',
-          app_id: 'A_PINETREE',
-          text: '✅ Shift started.',
-          channel: 'C_TEST',
-          ts: '100.001',
-        },
-      });
+    const body = {
+      type: 'event_callback',
+      event_id: 'Ev_bot_app_id',
+      event_time: Math.floor(Date.now() / 1000),
+      event: {
+        type: 'message',
+        user: 'U_BOT',
+        app_id: 'A_PINETREE',
+        text: '✅ Shift started.',
+        channel: 'C_TEST',
+        ts: '100.001',
+      },
+    };
+    const res = await request(app).post('/webhook/slack').set(slackSign(body)).send(body);
 
     expect(res.status).toBe(200);
     expect(await prisma.event.count()).toBe(before);
@@ -425,20 +440,19 @@ describe('API integration', () => {
   it('ignores Slack messages with bot_id set', async () => {
     const before = await prisma.event.count();
 
-    const res = await request(app)
-      .post('/webhook/slack')
-      .send({
-        type: 'event_callback',
-        event_id: 'Ev_bot_id',
-        event_time: Math.floor(Date.now() / 1000),
-        event: {
-          type: 'message',
-          bot_id: 'B_PINETREE',
-          text: '✅ Shift started.',
-          channel: 'C_TEST',
-          ts: '100.002',
-        },
-      });
+    const body = {
+      type: 'event_callback',
+      event_id: 'Ev_bot_id',
+      event_time: Math.floor(Date.now() / 1000),
+      event: {
+        type: 'message',
+        bot_id: 'B_PINETREE',
+        text: '✅ Shift started.',
+        channel: 'C_TEST',
+        ts: '100.002',
+      },
+    };
+    const res = await request(app).post('/webhook/slack').set(slackSign(body)).send(body);
 
     expect(res.status).toBe(200);
     expect(await prisma.event.count()).toBe(before);
@@ -447,19 +461,18 @@ describe('API integration', () => {
   it('ignores Slack messages with no user field', async () => {
     const before = await prisma.event.count();
 
-    const res = await request(app)
-      .post('/webhook/slack')
-      .send({
-        type: 'event_callback',
-        event_id: 'Ev_no_user',
-        event_time: Math.floor(Date.now() / 1000),
-        event: {
-          type: 'message',
-          text: 'some automated message',
-          channel: 'C_TEST',
-          ts: '100.003',
-        },
-      });
+    const body = {
+      type: 'event_callback',
+      event_id: 'Ev_no_user',
+      event_time: Math.floor(Date.now() / 1000),
+      event: {
+        type: 'message',
+        text: 'some automated message',
+        channel: 'C_TEST',
+        ts: '100.003',
+      },
+    };
+    const res = await request(app).post('/webhook/slack').set(slackSign(body)).send(body);
 
     expect(res.status).toBe(200);
     expect(await prisma.event.count()).toBe(before);
@@ -468,21 +481,20 @@ describe('API integration', () => {
   it('ignores Slack messages with bot_message subtype', async () => {
     const before = await prisma.event.count();
 
-    const res = await request(app)
-      .post('/webhook/slack')
-      .send({
-        type: 'event_callback',
-        event_id: 'Ev_subtype',
-        event_time: Math.floor(Date.now() / 1000),
-        event: {
-          type: 'message',
-          subtype: 'bot_message',
-          user: 'U_BOT',
-          text: '✅ Shift started.',
-          channel: 'C_TEST',
-          ts: '100.004',
-        },
-      });
+    const body = {
+      type: 'event_callback',
+      event_id: 'Ev_subtype',
+      event_time: Math.floor(Date.now() / 1000),
+      event: {
+        type: 'message',
+        subtype: 'bot_message',
+        user: 'U_BOT',
+        text: '✅ Shift started.',
+        channel: 'C_TEST',
+        ts: '100.004',
+      },
+    };
+    const res = await request(app).post('/webhook/slack').set(slackSign(body)).send(body);
 
     expect(res.status).toBe(200);
     expect(await prisma.event.count()).toBe(before);
@@ -493,9 +505,8 @@ describe('API integration', () => {
   // ---------------------------------------------------------------------------
 
   it('responds to Slack url_verification challenge', async () => {
-    const res = await request(app)
-      .post('/webhook/slack')
-      .send({ type: 'url_verification', challenge: 'abc123' });
+    const body = { type: 'url_verification', challenge: 'abc123' };
+    const res = await request(app).post('/webhook/slack').set(slackSign(body)).send(body);
 
     expect(res.status).toBe(200);
     expect((res.body as { challenge: string }).challenge).toBe('abc123');
