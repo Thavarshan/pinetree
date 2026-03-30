@@ -1,6 +1,10 @@
 type PendingKey = string;
 
-export type PendingState = { type: 'status' } | { type: 'concern' } | { type: 'crew_off' };
+export type PendingState =
+  | { type: 'status' }
+  | { type: 'supply_request' }
+  | { type: 'concern' }
+  | { type: 'crew_off' };
 
 type PendingEntry = {
   state: PendingState;

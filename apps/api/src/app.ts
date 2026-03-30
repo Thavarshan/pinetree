@@ -192,7 +192,10 @@ export function createApp(params: { env: Env; prisma: PrismaClient }): express.E
         .safeParse(req.query.status);
       const items = await prisma.supplyRequest.findMany({
         ...(statusParsed.success && { where: { status: statusParsed.data } }),
-        include: { user: { select: { name: true } }, chat: { select: { providerChatId: true } } },
+        include: {
+          user: { select: { name: true } },
+          chat: { select: { providerChatId: true, name: true } },
+        },
         orderBy: { createdAt: 'desc' },
       });
       res.json({ ok: true, items });
@@ -237,7 +240,10 @@ export function createApp(params: { env: Env; prisma: PrismaClient }): express.E
       const statusParsed = z.enum(['OPEN', 'IN_PROGRESS', 'COMPLETED']).safeParse(req.query.status);
       const items = await prisma.concern.findMany({
         ...(statusParsed.success && { where: { status: statusParsed.data } }),
-        include: { user: { select: { name: true } } },
+        include: {
+          user: { select: { name: true } },
+          chat: { select: { providerChatId: true, name: true } },
+        },
         orderBy: { createdAt: 'desc' },
       });
       res.json({ ok: true, items });
@@ -286,7 +292,10 @@ export function createApp(params: { env: Env; prisma: PrismaClient }): express.E
       const statusParsed = z.enum(['PENDING', 'APPROVED', 'DENIED']).safeParse(req.query.status);
       const items = await prisma.crewOffRequest.findMany({
         ...(statusParsed.success && { where: { status: statusParsed.data } }),
-        include: { user: { select: { name: true } } },
+        include: {
+          user: { select: { name: true } },
+          chat: { select: { providerChatId: true, name: true } },
+        },
         orderBy: { createdAt: 'desc' },
       });
       res.json({ ok: true, items });

@@ -15,7 +15,7 @@ export type ParsedEvent =
   | { eventType: EventType.BREAK_END }
   | { eventType: EventType.SHIFT_END }
   | { eventType: EventType.STATUS; text?: string }
-  | { eventType: EventType.SUPPLY_REQUEST }
+  | { eventType: EventType.SUPPLY_REQUEST; text?: string }
   | { eventType: EventType.CONCERN; text?: string }
   | { eventType: EventType.CREW_OFF; text?: string };
 

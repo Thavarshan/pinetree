@@ -129,3 +129,25 @@ export async function notifySlackChannel(params: {
     text: params.text,
   }).catch((e: unknown) => console.error('[slack notify]', e));
 }
+
+export async function slackGetChannelInfo(params: {
+  token: string;
+  channelId: string;
+}): Promise<{ name: string } | null> {
+  const url = new URL('https://slack.com/api/conversations.info');
+  url.searchParams.set('channel', params.channelId);
+
+  const res = await fetch(url.toString(), {
+    method: 'GET',
+    headers: { Authorization: `Bearer ${params.token}` },
+  });
+
+  const json = (await res.json().catch(() => null)) as {
+    ok: boolean;
+    channel?: { name?: string };
+    error?: string;
+  } | null;
+
+  if (!res.ok || !json || !json.ok || !json.channel?.name) return null;
+  return { name: json.channel.name };
+}

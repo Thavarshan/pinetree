@@ -47,6 +47,7 @@ export async function handleIncomingMessage(params: {
   avatarUrl?: string;
 
   providerChatId?: string;
+  chatName?: string;
   conversationId: string;
 
   messageText: string;
@@ -69,6 +70,7 @@ export async function handleIncomingMessage(params: {
     userName,
     avatarUrl,
     providerChatId,
+    chatName,
     conversationId,
     messageText,
     sourceMessageId,
@@ -92,6 +94,7 @@ export async function handleIncomingMessage(params: {
       userName,
       ...(avatarUrl ? { avatarUrl } : {}),
       ...(providerChatId ? { providerChatId } : {}),
+      ...(chatName ? { chatName } : {}),
     });
 
     if (pendingState.type === 'status') {
@@ -184,6 +187,39 @@ export async function handleIncomingMessage(params: {
         text: '✅ Your crew-off request has been submitted and escalated to the manager.',
         showMenu: true,
       });
+    } else if (pendingState.type === 'supply_request') {
+      await insertEventIdempotent({
+        prisma,
+        chatId: chat.id,
+        userId: user.id,
+        eventType: EventType.SUPPLY_REQUEST,
+        text: messageText,
+        sourceMessageId: normalizedSourceMessageId,
+        rawPayload,
+        createdAt,
+      });
+
+      await prisma.supplyRequest.create({
+        data: {
+          userId: user.id,
+          chatId: chat.id,
+          text: messageText,
+          clientLocation: providerChatId ?? null,
+          status: 'PENDING',
+        },
+      });
+
+      await notifySlackChannel({
+        token: env.SLACK_BOT_TOKEN,
+        channelId: env.SLACK_CALLCENTRE_CHANNEL_ID,
+        text: `🛒 Supply request from *${userName}*:\n${messageText}`,
+      });
+
+      await sendMessage({
+        conversationId,
+        text: '✅ Supply request submitted.',
+        showMenu: true,
+      });
     }
 
     return;
@@ -207,6 +243,15 @@ export async function handleIncomingMessage(params: {
     await sendMessage({
       conversationId,
       text: "What's your status? Reply with a short message.",
+    });
+    return;
+  }
+
+  if (result.kind === 'supply_request_pending') {
+    pendingStatus.setPending(key, { type: 'supply_request' }, 2 * 60 * 1000);
+    await sendMessage({
+      conversationId,
+      text: 'What supplies do you need? Reply with details.',
     });
     return;
   }
@@ -254,6 +299,7 @@ export async function handleIncomingMessage(params: {
     userName,
     ...(avatarUrl ? { avatarUrl } : {}),
     ...(providerChatId ? { providerChatId } : {}),
+    ...(chatName ? { chatName } : {}),
   });
 
   await insertEventIdempotent({
@@ -272,19 +318,24 @@ export async function handleIncomingMessage(params: {
 
   // SUPPLY_REQUEST: create a dedicated SupplyRequest record and notify call centre.
   if (result.eventType === EventType.SUPPLY_REQUEST) {
+    const supplyText = 'text' in result && typeof result.text === 'string' ? result.text : null;
     await prisma.supplyRequest.create({
       data: {
         userId: user.id,
         chatId: chat.id,
+        ...(supplyText ? { text: supplyText } : {}),
         clientLocation: providerChatId ?? null,
         status: 'PENDING',
       },
     });
 
+    const notifMsg = supplyText
+      ? `🛒 Supply request from *${userName}*:\n${supplyText}`
+      : `🛒 Supply request from *${userName}* in ${providerChatId ?? 'direct message'}.`;
     await notifySlackChannel({
       token: env.SLACK_BOT_TOKEN,
       channelId: env.SLACK_CALLCENTRE_CHANNEL_ID,
-      text: `🛒 Supply request from *${userName}* in ${providerChatId ?? 'direct message'}.`,
+      text: notifMsg,
     });
   }
 
@@ -302,6 +353,7 @@ async function upsertUserChat(params: {
   userName: string;
   avatarUrl?: string;
   providerChatId?: string;
+  chatName?: string;
 }): Promise<{ user: { id: string }; chat: { id: string } }> {
   const user = await params.prisma.user.upsert({
     where: {
@@ -325,8 +377,14 @@ async function upsertUserChat(params: {
     where: {
       provider_providerChatId: { provider: params.provider, providerChatId },
     },
-    create: { provider: params.provider, providerChatId },
-    update: {},
+    create: {
+      provider: params.provider,
+      providerChatId,
+      ...(params.chatName ? { name: params.chatName } : {}),
+    },
+    update: {
+      ...(params.chatName ? { name: params.chatName } : {}),
+    },
     select: { id: true },
   });
 

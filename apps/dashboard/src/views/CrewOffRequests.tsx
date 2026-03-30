@@ -1,9 +1,9 @@
 import { useEffect, useState } from 'react';
 import {
-  getCrewOffRequests,
-  updateCrewOffStatus,
-  type CrewOffRequest,
-  type CrewOffStatus,
+    getCrewOffRequests,
+    updateCrewOffStatus,
+    type CrewOffRequest,
+    type CrewOffStatus,
 } from '../api';
 import { StatusBadge } from '../components/StatusBadge';
 import { Table, type Column } from '../components/Table';
@@ -83,6 +83,7 @@ export default function CrewOffRequests() {
 
   const columns: Column<CrewOffRequest>[] = [
     { header: 'User', render: (r) => r.user.name },
+    { header: 'Channel', render: (r) => r.chat.name ?? r.chat.providerChatId },
     {
       header: 'Details',
       render: (r) => (

@@ -1,9 +1,9 @@
 import { useEffect, useState } from 'react';
 import {
-  getSupplyRequests,
-  updateSupplyRequestStatus,
-  type SupplyRequest,
-  type SupplyRequestStatus,
+    getSupplyRequests,
+    updateSupplyRequestStatus,
+    type SupplyRequest,
+    type SupplyRequestStatus,
 } from '../api';
 import { StatusBadge } from '../components/StatusBadge';
 import { Table, type Column } from '../components/Table';
@@ -74,7 +74,11 @@ export default function SupplyRequests() {
 
   const columns: Column<SupplyRequest>[] = [
     { header: 'User', render: (r) => r.user.name },
-    { header: 'Location / Chat', render: (r) => r.clientLocation ?? r.chat.providerChatId },
+    {
+      header: 'Location / Chat',
+      render: (r) => r.clientLocation ?? r.chat.name ?? r.chat.providerChatId,
+    },
+    { header: 'Notes', render: (r) => r.text ?? '—' },
     { header: 'Status', render: (r) => <StatusBadge status={r.status} /> },
     { header: 'Date', render: (r) => formatDate(r.createdAt) },
     {

@@ -80,6 +80,7 @@ export default function Concerns() {
 
   const columns: Column<Concern>[] = [
     { header: 'User', render: (r) => r.user.name },
+    { header: 'Channel', render: (r) => r.chat.name ?? r.chat.providerChatId },
     {
       header: 'Concern',
       render: (r) => (

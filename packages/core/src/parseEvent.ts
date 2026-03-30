@@ -41,6 +41,7 @@ export type ParseResult =
   | ({ kind: 'event' } & ParsedEvent)
   | { kind: 'menu' }
   | { kind: 'status_pending' }
+  | { kind: 'supply_request_pending' }
   | { kind: 'concern_pending' }
   | { kind: 'crew_off_pending' }
   | { kind: 'none' };
@@ -71,7 +72,8 @@ export function parseEvent(
         if (tail) return { kind: 'event', eventType: EventType.STATUS, text: tail };
         return { kind: 'status_pending' };
       case '/supply':
-        return { kind: 'event', eventType: EventType.SUPPLY_REQUEST };
+        if (tail) return { kind: 'event', eventType: EventType.SUPPLY_REQUEST, text: tail };
+        return { kind: 'supply_request_pending' };
       case '/concern':
         if (tail) return { kind: 'event', eventType: EventType.CONCERN, text: tail };
         return { kind: 'concern_pending' };
@@ -93,6 +95,7 @@ export function parseEvent(
   const button = buttonMap[normalized];
   if (button) {
     if (button.eventType === EventType.STATUS) return { kind: 'status_pending' };
+    if (button.eventType === EventType.SUPPLY_REQUEST) return { kind: 'supply_request_pending' };
     return { kind: 'event', ...button };
   }
 

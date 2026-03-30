@@ -2,7 +2,12 @@ import type express from 'express';
 import crypto from 'node:crypto';
 import { z } from 'zod';
 
-import { slackGetUserProfile, slackSendMessage, slackUpdateMessage } from '../slack';
+import {
+    slackGetChannelInfo,
+    slackGetUserProfile,
+    slackSendMessage,
+    slackUpdateMessage,
+} from '../slack';
 import { handleIncomingMessage } from './shared';
 import type { BotAdapter, BotContext } from './types';
 
@@ -127,6 +132,7 @@ export function createSlackAdapter(): BotAdapter {
         string,
         { value: { name: string; avatarUrl?: string } | null; expiresAt: number }
       >();
+      const channelCache = new Map<string, { value: string | null; expiresAt: number }>();
       const userCacheTtlMs = 60 * 60 * 1000;
 
       app.post('/webhook/slack', (req, res, next) => {
@@ -222,8 +228,26 @@ export function createSlackAdapter(): BotAdapter {
             return value;
           };
 
+          const getChannelName = async (): Promise<string | null> => {
+            if (!ctx.env.SLACK_BOT_TOKEN || !channel) return null;
+            const now = Date.now();
+            const cached = channelCache.get(channel);
+            if (cached && cached.expiresAt > now) return cached.value;
+
+            const info = await slackGetChannelInfo({
+              token: ctx.env.SLACK_BOT_TOKEN,
+              channelId: channel,
+            });
+            const value = info?.name ?? null;
+            channelCache.set(channel, { value, expiresAt: now + userCacheTtlMs });
+            return value;
+          };
+
           void (async () => {
-            const userInfo = await getUserInfo().catch(() => null);
+            const [userInfo, channelName] = await Promise.all([
+              getUserInfo().catch(() => null),
+              getChannelName().catch(() => null),
+            ]);
             const firstFile = event.files?.[0];
             await handleIncomingMessage({
               provider: 'slack',
@@ -235,6 +259,7 @@ export function createSlackAdapter(): BotAdapter {
               userName: userInfo?.name ?? slackUserId,
               ...(userInfo?.avatarUrl ? { avatarUrl: userInfo.avatarUrl } : {}),
               providerChatId: channel,
+              ...(channelName ? { chatName: channelName } : {}),
               conversationId: channel,
               messageText: text,
               sourceMessageId: eventId,
@@ -350,11 +375,29 @@ export function createSlackAdapter(): BotAdapter {
           };
 
           void (async () => {
-            const userInfo = await (ctx.env.SLACK_BOT_TOKEN
-              ? slackGetUserProfile({ token: ctx.env.SLACK_BOT_TOKEN, userId: slackUserId }).catch(
-                  () => null,
-                )
-              : Promise.resolve(null));
+            const getChannelNameForAction = async (): Promise<string | null> => {
+              if (!ctx.env.SLACK_BOT_TOKEN || !channelId) return null;
+              const now = Date.now();
+              const cached = channelCache.get(channelId);
+              if (cached && cached.expiresAt > now) return cached.value;
+              const info = await slackGetChannelInfo({
+                token: ctx.env.SLACK_BOT_TOKEN,
+                channelId,
+              });
+              const value = info?.name ?? null;
+              channelCache.set(channelId, { value, expiresAt: now + userCacheTtlMs });
+              return value;
+            };
+
+            const [userInfo, channelName] = await Promise.all([
+              ctx.env.SLACK_BOT_TOKEN
+                ? slackGetUserProfile({
+                    token: ctx.env.SLACK_BOT_TOKEN,
+                    userId: slackUserId,
+                  }).catch(() => null)
+                : Promise.resolve(null),
+              getChannelNameForAction().catch(() => null),
+            ]);
 
             await handleIncomingMessage({
               provider: 'slack',
@@ -366,6 +409,7 @@ export function createSlackAdapter(): BotAdapter {
               userName: userInfo?.name ?? slackUserId,
               ...(userInfo?.avatarUrl ? { avatarUrl: userInfo.avatarUrl } : {}),
               providerChatId: channelId,
+              ...(channelName ? { chatName: channelName } : {}),
               conversationId: channelId,
               messageText,
               sourceMessageId: actionSourceId,

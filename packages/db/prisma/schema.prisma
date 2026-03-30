@@ -62,6 +62,7 @@ model SupplyRequest {
   id             String   @id @default(cuid())
   userId         String
   chatId         String
+  text           String?
   clientLocation String?
   status         String   @default("PENDING")
   createdAt      DateTime @default(now())

@@ -38,12 +38,13 @@ export interface SupplyRequest {
   id: string;
   userId: string;
   chatId: string;
+  text: string | null;
   clientLocation: string | null;
   status: SupplyRequestStatus;
   createdAt: string;
   updatedAt: string;
   user: { name: string };
-  chat: { providerChatId: string };
+  chat: { providerChatId: string; name: string | null };
 }
 
 export interface Concern {
@@ -57,6 +58,7 @@ export interface Concern {
   createdAt: string;
   updatedAt: string;
   user: { name: string };
+  chat: { providerChatId: string; name: string | null };
 }
 
 export interface CrewOffRequest {
@@ -68,6 +70,7 @@ export interface CrewOffRequest {
   createdAt: string;
   updatedAt: string;
   user: { name: string };
+  chat: { providerChatId: string; name: string | null };
 }
 
 // ---- Supply Requests ----
