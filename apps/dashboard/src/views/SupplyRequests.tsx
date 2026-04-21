@@ -1,9 +1,9 @@
 import { useEffect, useState } from 'react';
 import {
-    getSupplyRequests,
-    updateSupplyRequestStatus,
-    type SupplyRequest,
-    type SupplyRequestStatus,
+  getSupplyRequests,
+  updateSupplyRequestStatus,
+  type SupplyRequest,
+  type SupplyRequestStatus,
 } from '../api';
 import { StatusBadge } from '../components/StatusBadge';
 import { Table, type Column } from '../components/Table';

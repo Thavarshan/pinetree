@@ -3,10 +3,10 @@ import crypto from 'node:crypto';
 import { z } from 'zod';
 
 import {
-    slackGetChannelInfo,
-    slackGetUserProfile,
-    slackSendMessage,
-    slackUpdateMessage,
+  slackGetChannelInfo,
+  slackGetUserProfile,
+  slackSendMessage,
+  slackUpdateMessage,
 } from '../slack';
 import { handleIncomingMessage } from './shared';
 import type { BotAdapter, BotContext } from './types';
