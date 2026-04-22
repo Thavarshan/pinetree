@@ -38,7 +38,8 @@ export default function App() {
     const handleLogin = (e: FormEvent) => {
       e.preventDefault();
       const expectedUser = (import.meta.env.VITE_ADMIN_USERNAME as string | undefined) ?? 'admin';
-      const expectedPass = (import.meta.env.VITE_ADMIN_PASSWORD as string | undefined) ?? 'password';
+      const expectedPass =
+        (import.meta.env.VITE_ADMIN_PASSWORD as string | undefined) ?? 'password';
       if (usernameInput === expectedUser && passwordInput === expectedPass) {
         sessionStorage.setItem(SESSION_KEY, '1');
         setAuthed(true);
