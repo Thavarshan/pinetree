@@ -1,9 +1,10 @@
 const BASE_URL: string = import.meta.env.VITE_API_BASE_URL ?? '';
 
-export const SESSION_KEY = 'pinetree_api_key';
+/** sessionStorage key used to persist the authenticated flag across page refreshes. */
+export const SESSION_KEY = 'pinetree_authed';
 
 function getApiKey(): string {
-  return sessionStorage.getItem(SESSION_KEY) ?? '';
+  return (import.meta.env.VITE_API_KEY as string | undefined) ?? '';
 }
 
 function apiHeaders(): Record<string, string> {

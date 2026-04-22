@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { type FormEvent, useState } from 'react';
 import { SESSION_KEY } from './api';
 import type { Tab } from './types';
 import Concerns from './views/Concerns';
@@ -21,52 +21,77 @@ const TABS: TabConfig[] = [
 
 export default function App() {
   const [tab, setTab] = useState<Tab>('overview');
-  const [apiKey, setApiKey] = useState<string>(() => sessionStorage.getItem(SESSION_KEY) ?? '');
-  const [keyInput, setKeyInput] = useState('');
-  const [keyError, setKeyError] = useState('');
+  const [authed, setAuthed] = useState<boolean>(() => sessionStorage.getItem(SESSION_KEY) === '1');
+  const [usernameInput, setUsernameInput] = useState('');
+  const [passwordInput, setPasswordInput] = useState('');
+  const [loginError, setLoginError] = useState('');
 
   const signOut = () => {
     sessionStorage.removeItem(SESSION_KEY);
-    setApiKey('');
-    setKeyInput('');
-    setKeyError('');
+    setAuthed(false);
+    setUsernameInput('');
+    setPasswordInput('');
+    setLoginError('');
   };
 
-  if (!apiKey) {
+  if (!authed) {
+    const handleLogin = (e: FormEvent) => {
+      e.preventDefault();
+      const expectedUser = (import.meta.env.VITE_ADMIN_USERNAME as string | undefined) ?? '';
+      const expectedPass = (import.meta.env.VITE_ADMIN_PASSWORD as string | undefined) ?? '';
+      if (usernameInput === expectedUser && passwordInput === expectedPass) {
+        sessionStorage.setItem(SESSION_KEY, '1');
+        setAuthed(true);
+        setLoginError('');
+      } else {
+        setLoginError('Invalid username or password.');
+      }
+    };
+
     return (
       <div className="min-h-screen flex items-center justify-center bg-gray-50">
         <div className="bg-white p-8 rounded-xl shadow-sm border border-gray-200 w-full max-w-sm">
           <div className="text-center items-center justify-center flex flex-col">
             <h1 className="text-lg font-semibold text-gray-900 mb-1">🌲 Pinetree</h1>
-            <p className="text-sm text-gray-500 mb-6">Enter your API key to continue.</p>
+            <p className="text-sm text-gray-500 mb-6">Sign in to continue.</p>
           </div>
-          <form
-            onSubmit={(e) => {
-              e.preventDefault();
-              const key = keyInput.trim();
-              if (!key) return;
-              sessionStorage.setItem(SESSION_KEY, key);
-              setApiKey(key);
-              setKeyError('');
-            }}
-          >
-            <label className="block text-sm font-medium text-gray-700 mb-1">API Key</label>
+          <form onSubmit={handleLogin}>
+            <label className="block text-sm font-medium text-gray-700 mb-1" htmlFor="username">
+              Username
+            </label>
             <input
-              type="password"
-              value={keyInput}
+              id="username"
+              type="text"
+              value={usernameInput}
               onChange={(e) => {
-                setKeyInput(e.target.value);
-                setKeyError('');
+                setUsernameInput(e.target.value);
+                setLoginError('');
               }}
-              className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-slate-500 mb-1"
-              placeholder="Enter your API key"
+              className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-slate-500 mb-3"
+              placeholder="Username"
+              autoComplete="username"
               autoFocus
             />
-            {keyError && <p className="text-xs text-red-600 mb-3">{keyError}</p>}
+            <label className="block text-sm font-medium text-gray-700 mb-1" htmlFor="password">
+              Password
+            </label>
+            <input
+              id="password"
+              type="password"
+              value={passwordInput}
+              onChange={(e) => {
+                setPasswordInput(e.target.value);
+                setLoginError('');
+              }}
+              className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-slate-500 mb-1"
+              placeholder="Password"
+              autoComplete="current-password"
+            />
+            {loginError && <p className="text-xs text-red-600 mt-1 mb-3">{loginError}</p>}
             <div className="mt-4">
               <button
                 type="submit"
-                disabled={!keyInput.trim()}
+                disabled={!usernameInput.trim() || !passwordInput}
                 className="w-full bg-slate-800 text-white py-2 rounded-lg text-sm font-medium hover:bg-slate-700 disabled:opacity-40 transition-colors"
               >
                 Sign in
